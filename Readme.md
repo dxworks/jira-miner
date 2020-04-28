@@ -1,7 +1,7 @@
 # Jira Miner
 This app is a command line application built to extract Issue information from JIRA. 
 
-Visit us on [Github](https://github.com/MarioRivis/jira-miner).
+Visit us on [Github](https://github.com/dxworks/jira-miner).
 ## Features
 The application extracts the following fields from all JIRA Issues from the desired projects:
 ```     
