@@ -85,4 +85,11 @@
         </dependency>
     </dependencies>
 
+    <repositories>
+        <repository>
+            <id>marios-nexus</id>
+            <name>Nexus</name>
+            <url>http://89.39.83.106:8081/repository/maven-snapshots</url>
+        </repository>
+    </repositories>
 </project>
