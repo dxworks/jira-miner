@@ -34,7 +34,7 @@ class ResultExporterIT {
                 .filter(issueField -> issueField.getId().equals("customfield_10026") || issueField.getId()
                         .equals("customfield_10018")).collect(Collectors.toList());
 
-        new ResultExporter().export(issues, Paths.get("./tasks.json"), testCustomFields);
+        new ResultExporter().export(issues, Paths.get("./tasks.json").toFile(), testCustomFields);
     }
 
 }

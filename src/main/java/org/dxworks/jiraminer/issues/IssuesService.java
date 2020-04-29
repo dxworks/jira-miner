@@ -61,6 +61,10 @@ public class IssuesService extends JiraApiService {
         return allChanges;
     }
 
+    public List<Issue> getAllIssuesForProjects(List<String> projectKeys) {
+        return getAllIssuesForProjects(projectKeys.toArray(new String[0]));
+    }
+
     public List<Issue> getAllIssuesForProjects(String... projectKeys) {
         String apiPath = getApiPath("search");
 

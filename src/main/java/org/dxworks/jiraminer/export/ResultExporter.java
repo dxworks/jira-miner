@@ -10,8 +10,8 @@ import org.dxworks.jiraminer.dto.response.issues.comments.IssueComment;
 import org.dxworks.jiraminer.dto.response.users.User;
 import org.dxworks.utils.java.rest.client.utils.JsonMapper;
 
+import java.io.File;
 import java.io.FileWriter;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -24,15 +24,15 @@ public class ResultExporter {
 
     public static final String AVATAR_RESOLUTION = "32x32";
 
-    public void export(List<Issue> issues, Path toPath) {
-        export(issues, toPath, emptyList());
+    public void export(List<Issue> issues, File toFile) {
+        export(issues, toFile, emptyList());
     }
 
     @SneakyThrows
-    public void export(List<Issue> issues, Path toPath, List<IssueField> customFields) {
+    public void export(List<Issue> issues, File toFile, List<IssueField> customFields) {
         ExportResult exportResult = getExportResult(issues, customFields);
 
-        new JsonMapper().writeJSON(new FileWriter(toPath.toFile()), exportResult);
+        new JsonMapper().writeJSON(new FileWriter(toFile), exportResult);
     }
 
     public ExportResult getExportResult(List<Issue> issues, List<IssueField> customFields) {
