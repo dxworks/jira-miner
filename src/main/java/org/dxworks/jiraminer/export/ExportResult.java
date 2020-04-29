@@ -6,10 +6,13 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Builder
 public class ExportResult extends GenericJson {
+    @Key
+    private Map<String, ExportIssueStatusCategory> statusIdToCategoryMap;
     @Key
     private List<ExportIssueType> issueTypes;
     @Key

@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class IssuesServiceTest {
+class IssuesServiceIT {
 
     private static final String JIRA_HOME = "https://loose.atlassian.net";
 

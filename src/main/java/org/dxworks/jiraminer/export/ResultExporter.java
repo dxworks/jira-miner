@@ -2,7 +2,10 @@ package org.dxworks.jiraminer.export;
 
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.dxworks.jiraminer.dto.response.issues.*;
+import org.dxworks.jiraminer.dto.response.issues.ChangeItem;
+import org.dxworks.jiraminer.dto.response.issues.ChangeLog;
+import org.dxworks.jiraminer.dto.response.issues.Issue;
+import org.dxworks.jiraminer.dto.response.issues.IssueField;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueComment;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
 import org.dxworks.jiraminer.dto.response.users.User;
@@ -22,23 +25,29 @@ public class ResultExporter {
 
     public static final String AVATAR_RESOLUTION = "32x32";
 
-    public void export(List<Issue> issues, File toFile) {
-        export(issues, toFile, emptyList());
+    public void export(List<Issue> issues, List<IssueStatus> issueStatuses, File toFile) {
+        export(issues, issueStatuses, toFile, emptyList());
     }
 
     @SneakyThrows
-    public void export(List<Issue> issues, File toFile, List<IssueField> customFields) {
-        ExportResult exportResult = getExportResult(issues, customFields);
+    public void export(List<Issue> issues, List<IssueStatus> issueStatuses, File toFile,
+            List<IssueField> customFields) {
+        ExportResult exportResult = getExportResult(issues, issueStatuses, customFields);
 
         new JsonMapper().writeJSON(new FileWriter(toFile), exportResult);
     }
 
-    public ExportResult getExportResult(List<Issue> issues, List<IssueField> customFields) {
+    public ExportResult getExportResult(List<Issue> issues, List<IssueStatus> issueStatuses,
+            List<IssueField> customFields) {
+        Map<String, ExportIssueStatusCategory> statusIdToCategoryMap = issueStatuses.stream()
+                .collect(Collectors.toMap(IssueStatus::getId, this::getStatusCategory));
+
         List<ExportUser> exportUsers = issues.stream()
                 .flatMap(issue -> Stream.of(issue.getCreator(), issue.getReporter(), issue.getAssignee()))
                 .filter(user -> user.getAccountId() != null).distinct()
                 .map(user -> ExportUser.builder().id(user.getAccountId()).name(user.getDisplayName())
-                        .avatarUrl((String) user.getAvatarUrls().get(AVATAR_RESOLUTION)).build()).collect(Collectors.toList());
+                        .avatarUrl((String) user.getAvatarUrls().get(AVATAR_RESOLUTION)).build())
+                .collect(Collectors.toList());
 
         List<ExportIssueType> exportIssueTypes = issues.stream().map(Issue::getIssuetype).distinct()
                 .map(type -> ExportIssueType.builder().id(type.getId()).name(type.getName())
@@ -47,8 +56,8 @@ public class ResultExporter {
 
         List<ExportIssue> exportIssues = getExportIssues(issues, customFields);
 
-        return ExportResult.builder().users(exportUsers).issueTypes(exportIssueTypes)
-                .issues(exportIssues).build();
+        return ExportResult.builder().statusIdToCategoryMap(statusIdToCategoryMap).users(exportUsers)
+                .issueTypes(exportIssueTypes).issues(exportIssues).build();
     }
 
     private List<ExportIssue> getExportIssues(List<Issue> issues, List<IssueField> customFields) {
@@ -66,9 +75,13 @@ public class ResultExporter {
 
     private ExportIssueStatus getStatus(Issue issue) {
         IssueStatus status = issue.getStatus();
-        return ExportIssueStatus.builder().name(status.getName()).statusCategory(
-                ExportIssueStatusCategory.builder().key(status.getStatusCategory().getKey())
-                        .name(status.getStatusCategory().getName()).build()).build();
+        return ExportIssueStatus.builder().name(status.getName()).id(status.getId())
+                .statusCategory(getStatusCategory(status)).build();
+    }
+
+    private ExportIssueStatusCategory getStatusCategory(IssueStatus status) {
+        return ExportIssueStatusCategory.builder().key(status.getStatusCategory().getKey())
+                .name(status.getStatusCategory().getName()).build();
     }
 
     private List<String> getSubtasks(Issue issue) {

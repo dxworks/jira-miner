@@ -10,5 +10,7 @@ public class ExportIssueStatus {
 	@Key
 	private String name;
 	@Key
+	private String id;
+	@Key
 	private ExportIssueStatusCategory statusCategory;
 }

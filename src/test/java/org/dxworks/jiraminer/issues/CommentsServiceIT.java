@@ -6,10 +6,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-class CommentsServiceTest {
+class CommentsServiceIT {
     public static final String ISSUE_KEY = "IG-11";
-    private static final String JIRA_HOME = "https://inspectorgit.atlassian.net";
-    private final CommentsService commentsService = new CommentsService(JIRA_HOME,
+    private final CommentsService commentsService = new CommentsService(TestUtils.getJiraHome(),
             TestUtils.getJiraAuthenticator());
 
     @Test

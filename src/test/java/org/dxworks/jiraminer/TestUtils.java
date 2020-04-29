@@ -13,4 +13,8 @@ public class TestUtils {
     public static AuthenticationProvider getJiraAuthenticator() {
         return JiraMinerConfigurer.getAuthenticator(JiraMinerConfiguration.getInstance());
     }
+
+    public static String getJiraHome() {
+        return JiraMinerConfiguration.getInstance().getJiraHome();
+    }
 }

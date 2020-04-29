@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-class IssueFieldsServiceTest {
+class IssueFieldsServiceIT {
 
     private static final String JIRA_HOME = "https://inspectorgit.atlassian.net";
 
