@@ -12,7 +12,7 @@ import java.util.Map;
 @Builder
 public class ExportResult extends GenericJson {
     @Key
-    private Map<String, ExportIssueStatusCategory> statusIdToCategoryMap;
+    private List<ExportIssueStatus> issueStatuses;
     @Key
     private List<ExportIssueType> issueTypes;
     @Key

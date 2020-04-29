@@ -8,6 +8,7 @@ import org.dxworks.jiraminer.dto.response.issues.Issue;
 import org.dxworks.jiraminer.dto.response.issues.IssueField;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueComment;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
+import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatusCategory;
 import org.dxworks.jiraminer.dto.response.users.User;
 import org.dxworks.utils.java.rest.client.utils.JsonMapper;
 
@@ -39,8 +40,8 @@ public class ResultExporter {
 
     public ExportResult getExportResult(List<Issue> issues, List<IssueStatus> issueStatuses,
             List<IssueField> customFields) {
-        Map<String, ExportIssueStatusCategory> statusIdToCategoryMap = issueStatuses.stream()
-                .collect(Collectors.toMap(IssueStatus::getId, this::getStatusCategory));
+        List<ExportIssueStatus> exportIssueStatuses = issueStatuses.stream().map(this::getExportIssueStatus)
+                .collect(Collectors.toList());
 
         List<ExportUser> exportUsers = issues.stream()
                 .flatMap(issue -> Stream.of(issue.getCreator(), issue.getReporter(), issue.getAssignee()))
@@ -56,14 +57,15 @@ public class ResultExporter {
 
         List<ExportIssue> exportIssues = getExportIssues(issues, customFields);
 
-        return ExportResult.builder().statusIdToCategoryMap(statusIdToCategoryMap).users(exportUsers)
-                .issueTypes(exportIssueTypes).issues(exportIssues).build();
+        return ExportResult.builder().issueStatuses(exportIssueStatuses).users(exportUsers).issueTypes(exportIssueTypes)
+                .issues(exportIssues).build();
     }
 
     private List<ExportIssue> getExportIssues(List<Issue> issues, List<IssueField> customFields) {
         return issues.stream()
                 .map(issue -> ExportIssue.builder().key(issue.getKey()).id(issue.getId()).self(issue.getSelf())
-                        .summary(issue.getSummary()).description(issue.getDescription()).status(getStatus(issue))
+                        .summary(issue.getSummary()).description(issue.getDescription())
+                        .status(getExportIssueStatus(issue))
                         .typeId(issue.getIssuetype().getId()).type(issue.getIssuetype().getName())
                         .created(issue.getCreated()).updated(issue.getUpdated())
                         .creatorId(getUserId(issue.getCreator())).reporterId(getUserId(issue.getReporter()))
@@ -73,15 +75,19 @@ public class ResultExporter {
                         .customFields(getCustomFields(issue, customFields)).build()).collect(Collectors.toList());
     }
 
-    private ExportIssueStatus getStatus(Issue issue) {
+    private ExportIssueStatus getExportIssueStatus(Issue issue) {
         IssueStatus status = issue.getStatus();
+        return getExportIssueStatus(status);
+    }
+
+    private ExportIssueStatus getExportIssueStatus(IssueStatus status) {
         return ExportIssueStatus.builder().name(status.getName()).id(status.getId())
                 .statusCategory(getStatusCategory(status)).build();
     }
 
     private ExportIssueStatusCategory getStatusCategory(IssueStatus status) {
-        return ExportIssueStatusCategory.builder().key(status.getStatusCategory().getKey())
-                .name(status.getStatusCategory().getName()).build();
+        IssueStatusCategory category = status.getStatusCategory();
+        return ExportIssueStatusCategory.builder().key(category.getKey()).name(category.getName()).build();
     }
 
     private List<String> getSubtasks(Issue issue) {
