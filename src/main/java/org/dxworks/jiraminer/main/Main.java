@@ -24,10 +24,10 @@ public class Main {
 	public static final String BASIC = "basic";
 	public static final String DETAILED = "detailed";
 
-	public static void main(String[] args) throws Exception {
+	public static void main(String[] args) {
 		log.info("Starting Jira Miner...");
 
-		JiraMinerConfiguration jiraMinerConfiguration = new JiraMinerConfiguration();
+		JiraMinerConfiguration jiraMinerConfiguration = JiraMinerConfiguration.getInstance();
 
 		List<Issue> issues = null;
 		try {

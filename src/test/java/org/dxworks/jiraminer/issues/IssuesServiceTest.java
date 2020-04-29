@@ -19,7 +19,7 @@ class IssuesServiceTest {
 
     private static final String JIRA_HOME = "https://loose.atlassian.net";
 
-    private final IssuesService issuesService = new IssuesService(JIRA_HOME, TestUtils.getJiraCredentials());
+    private final IssuesService issuesService = new IssuesService(JIRA_HOME, TestUtils.getJiraAuthenticator());
 
     @Test
     void getAllIssuesForProjects() {

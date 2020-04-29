@@ -11,13 +11,13 @@ import org.dxworks.jiraminer.dto.response.issues.comments.IssueComment;
 
 import java.util.List;
 
-public class IssueCommentsService extends JiraApiService {
+public class CommentsService extends JiraApiService {
 
-    public IssueCommentsService(String jiraHome, HttpRequestInitializer httpRequestInitializer) {
+    public CommentsService(String jiraHome, HttpRequestInitializer httpRequestInitializer) {
         super(jiraHome, httpRequestInitializer);
     }
 
-    public IssueCommentsService(String jiraHome) {
+    public CommentsService(String jiraHome) {
         super(jiraHome);
     }
 

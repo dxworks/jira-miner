@@ -11,6 +11,9 @@ import org.dxworks.jiraminer.dto.response.projects.Project;
 
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.Properties;
+
+import static java.util.Arrays.asList;
 
 public class ProjectsService extends JiraApiService {
 
@@ -28,11 +31,7 @@ public class ProjectsService extends JiraApiService {
         String apiPath = getApiPath("project");
 
         HttpResponse httpResponse = httpClient.get(new GenericUrl(apiPath));
-
-        Type type = new TypeToken<List<Project>>() {
-        }.getType();
-
-        return (List<Project>) httpResponse.parseAs(type);
+        return asList(httpResponse.parseAs(Project[].class));
     }
 
     @SneakyThrows

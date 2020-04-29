@@ -11,7 +11,7 @@ class IssueFieldsServiceTest {
     private static final String JIRA_HOME = "https://inspectorgit.atlassian.net";
 
     private final IssueFieldsService issueFieldsService = new IssueFieldsService(JIRA_HOME,
-            TestUtils.getJiraCredentials());
+            TestUtils.getJiraAuthenticator());
 
     @Test
     void getAllFields() {

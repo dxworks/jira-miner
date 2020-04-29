@@ -12,5 +12,9 @@ public class ExportChangeItem {
     @Key
     private String from;
     @Key
+    private String fromString;
+    @Key
     private String to;
+    @Key
+    private String toString;
 }

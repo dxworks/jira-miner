@@ -4,6 +4,7 @@ import com.google.api.client.json.GenericJson;
 import com.google.api.client.util.Key;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
 import org.dxworks.jiraminer.dto.response.users.User;
 
 import java.util.List;

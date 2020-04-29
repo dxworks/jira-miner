@@ -17,6 +17,7 @@ import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.*
 @Data
 @Slf4j
 public class JiraMinerConfiguration {
+    private static JiraMinerConfiguration _instance;
     private String projectID;
 
     private String jiraHome;
@@ -25,7 +26,13 @@ public class JiraMinerConfiguration {
 
     private Properties configurationProperties;
 
-    public JiraMinerConfiguration() {
+    public static JiraMinerConfiguration getInstance() {
+        if (_instance == null)
+            _instance = new JiraMinerConfiguration();
+        return _instance;
+    }
+
+    private JiraMinerConfiguration() {
         readConfigurationFile();
     }
 

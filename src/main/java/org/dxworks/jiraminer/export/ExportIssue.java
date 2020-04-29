@@ -41,7 +41,7 @@ public class ExportIssue {
      * The current status of the Issue
      */
     @Key
-    private String status;
+    private ExportIssueStatus status;
     /**
      * The id of the issue type from ExportReport
      */

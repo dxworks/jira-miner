@@ -1,7 +1,7 @@
 package org.dxworks.jiraminer.configuration;
 
-import com.google.api.client.http.HttpRequestInitializer;
 import org.dxworks.jiraminer.issues.IssuesService;
+import org.dxworks.utils.java.rest.client.providers.AuthenticationProvider;
 import org.dxworks.utils.java.rest.client.providers.BasicAuthenticationProvider;
 import org.dxworks.utils.java.rest.client.providers.CookieAuthenticationProvider;
 
@@ -17,8 +17,8 @@ public class JiraMinerConfigurer {
 		return new IssuesService(configuration.getJiraHome(), getAuthenticator(configuration));
 	}
 
-	private HttpRequestInitializer getAuthenticator(JiraMinerConfiguration configuration) {
-		HttpRequestInitializer authenticator;
+	public static AuthenticationProvider getAuthenticator(JiraMinerConfiguration configuration) {
+		AuthenticationProvider authenticator;
 		switch (configuration.getAuthenticationType()) {
 		case BASIC:
 			authenticator = new BasicAuthenticationProvider(configuration.getProperty("username"),

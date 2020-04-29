@@ -2,11 +2,9 @@ package org.dxworks.jiraminer.export;
 
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.dxworks.jiraminer.dto.response.issues.ChangeItem;
-import org.dxworks.jiraminer.dto.response.issues.ChangeLog;
-import org.dxworks.jiraminer.dto.response.issues.Issue;
-import org.dxworks.jiraminer.dto.response.issues.IssueField;
+import org.dxworks.jiraminer.dto.response.issues.*;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueComment;
+import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
 import org.dxworks.jiraminer.dto.response.users.User;
 import org.dxworks.utils.java.rest.client.utils.JsonMapper;
 
@@ -56,14 +54,21 @@ public class ResultExporter {
     private List<ExportIssue> getExportIssues(List<Issue> issues, List<IssueField> customFields) {
         return issues.stream()
                 .map(issue -> ExportIssue.builder().key(issue.getKey()).id(issue.getId()).self(issue.getSelf())
-                        .summary(issue.getSummary()).description(issue.getDescription())
-                        .status(issue.getStatus().getName()).typeId(issue.getIssuetype().getId())
-                        .type(issue.getIssuetype().getName()).created(issue.getCreated()).updated(issue.getUpdated())
+                        .summary(issue.getSummary()).description(issue.getDescription()).status(getStatus(issue))
+                        .typeId(issue.getIssuetype().getId()).type(issue.getIssuetype().getName())
+                        .created(issue.getCreated()).updated(issue.getUpdated())
                         .creatorId(getUserId(issue.getCreator())).reporterId(getUserId(issue.getReporter()))
                         .assigneeId(getUserId(issue.getAssignee())).priority(issue.getPriority().getName())
                         .parent(getParent(issue)).subTasks(getSubtasks(issue)).changes(getChanges(issue))
                         .comments(getComments(issue)).timeEstimate(issue.getTimeestimate())
                         .customFields(getCustomFields(issue, customFields)).build()).collect(Collectors.toList());
+    }
+
+    private ExportIssueStatus getStatus(Issue issue) {
+        IssueStatus status = issue.getStatus();
+        return ExportIssueStatus.builder().name(status.getName()).statusCategory(
+                ExportIssueStatusCategory.builder().key(status.getStatusCategory().getKey())
+                        .name(status.getStatusCategory().getName()).build()).build();
     }
 
     private List<String> getSubtasks(Issue issue) {
@@ -98,7 +103,8 @@ public class ResultExporter {
                         .created(change.getCreated()).changedFields(
                                 change.getItems().stream().map(ChangeItem::getField).collect(Collectors.toList()))
                         .items(change.getItems().stream().map(item -> ExportChangeItem.builder().field(item.getField())
-                                .from(item.getFromString()).to(item.getToString()).build())
+                                .fromString(item.getFromString()).toString(item.getToString()).from(item.getFrom())
+                                .to(item.getTo()).build())
                                 .collect(Collectors.toList())).build()).collect(Collectors.toList());
     }
 
