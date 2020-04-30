@@ -13,9 +13,12 @@ import org.dxworks.jiraminer.dto.response.issues.IssueChange;
 import org.dxworks.jiraminer.dto.response.issues.IssueSearchResult;
 import org.dxworks.jiraminer.pagination.IssueChangelogUrl;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.singletonList;
@@ -62,10 +65,18 @@ public class IssuesService extends JiraApiService {
     }
 
     public List<Issue> getAllIssuesForProjects(List<String> projectKeys) {
-        return getAllIssuesForProjects(projectKeys.toArray(new String[0]));
+        return getAllIssuesForProjects(null, projectKeys);
+    }
+
+    public List<Issue> getAllIssuesForProjects(LocalDate updatedAfter, List<String> projectKeys) {
+        return getAllIssuesForProjects(updatedAfter, projectKeys.toArray(new String[0]));
     }
 
     public List<Issue> getAllIssuesForProjects(String... projectKeys) {
+        return getAllIssuesForProjects(null, projectKeys);
+    }
+
+    public List<Issue> getAllIssuesForProjects(LocalDate updatedAfter, String... projectKeys) {
         String apiPath = getApiPath("search");
 
         List<Issue> allIssues = new ArrayList<>();
@@ -74,7 +85,7 @@ public class IssuesService extends JiraApiService {
         int maxResults = 100;
         int total;
 
-        String jqlQuery = createJqlQuery(projectKeys);
+        String jqlQuery = createJqlQuery(updatedAfter, projectKeys);
         do {
             IssueSearchResult searchResult = searchIssues(apiPath, jqlQuery, maxResults, startAt);
 
@@ -101,12 +112,13 @@ public class IssuesService extends JiraApiService {
         return httpResponse.parseAs(IssueSearchResult.class);
     }
 
-    private String createJqlQuery(String... existingJiraProjects) {
+    private String createJqlQuery(LocalDate updatedAfter, String... existingJiraProjects) {
         String jql = "project in (";
-        jql += Arrays.stream(existingJiraProjects)
-                .map(this::encloseInQuotes)
-                .collect(Collectors.joining(","));
+        jql += Arrays.stream(existingJiraProjects).map(this::encloseInQuotes).collect(Collectors.joining(","));
         jql += ")";
+        jql += Optional.ofNullable(updatedAfter)
+                .map(updated -> " and updated > " + updated.format(DateTimeFormatter.ofPattern("\"yyyy/MM/dd\"")))
+                .orElse("");
 
         return jql;
     }

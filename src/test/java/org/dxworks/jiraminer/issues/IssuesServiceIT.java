@@ -6,6 +6,7 @@ import org.dxworks.jiraminer.dto.response.issues.ChangeLog;
 import org.dxworks.jiraminer.dto.response.issues.Issue;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -17,18 +18,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class IssuesServiceIT {
 
-    private static final String JIRA_HOME = "https://loose.atlassian.net";
+	private static final String JIRA_HOME = TestUtils.getJiraHome();
+	public static final String PROJECT_KEY = "IG";
 
-    private final IssuesService issuesService = new IssuesService(JIRA_HOME, TestUtils.getJiraAuthenticator());
+	private final IssuesService issuesService = new IssuesService(JIRA_HOME, TestUtils.getJiraAuthenticator());
 
-    @Test
-    void getAllIssuesForProjects() {
-        List<Issue> issues = issuesService.getAllIssuesForProjects("SM");
+	@Test
+	void getAllIssuesForProjects() {
+		List<Issue> issues = issuesService.getAllIssuesForProjects(PROJECT_KEY);
 
-        assertTrue(issues.size() >= 25);
+		assertTrue(issues.size() >= 25);
 
 
-        Map<String, Issue> keyToIssue = issues.stream().collect(Collectors.toMap(Issue::getKey, Function.identity()));
+		Map<String, Issue> keyToIssue = issues.stream().collect(Collectors.toMap(Issue::getKey, Function.identity()));
 
         double averageSubtasksPerStory = issues.stream()
                 .filter(issue -> !issue.getIssuetype().isSubTask())
@@ -43,29 +45,34 @@ class IssuesServiceIT {
 
     @Test
     void testGetChangesForAllIssues() {
-        List<Issue> issues = getIssuesWithChanges();
+		List<Issue> issues = getIssuesWithChanges();
 
-        issues.forEach(issue -> {
-            System.out.println(String.format("%s: %s", issue.getKey(), issue.getSummary()));
-            issue.getChangelog().getChanges().stream().filter(issueChange -> issueChange.getItems().stream()
-                    .anyMatch(changeItem -> "status".equalsIgnoreCase(changeItem.getField()))).forEach(issueChange -> {
-                Optional<ChangeItem> first = issueChange.getItems().stream()
-                        .filter(changeItem -> "status".equalsIgnoreCase(changeItem.getField())).findFirst();
-                first.ifPresent(changeItem -> System.out.println(
-                        String.format("\t%s: [%s] -> [%s]", issueChange.getCreated(), changeItem.getFromString(),
-                                changeItem.getToString())));
-            });
-        });
-    }
+		issues.forEach(issue -> {
+			System.out.println(String.format("%s: %s", issue.getKey(), issue.getSummary()));
+			issue.getChangelog().getChanges().stream().filter(issueChange -> issueChange.getItems().stream()
+					.anyMatch(changeItem -> "status".equalsIgnoreCase(changeItem.getField()))).forEach(issueChange -> {
+				Optional<ChangeItem> first = issueChange.getItems().stream()
+						.filter(changeItem -> "status".equalsIgnoreCase(changeItem.getField())).findFirst();
+				first.ifPresent(changeItem -> System.out.println(
+						String.format("\t%s: [%s] -> [%s]", issueChange.getCreated(), changeItem.getFromString(),
+								changeItem.getToString())));
+			});
+		});
+	}
 
-    private List<Issue> getIssuesWithChanges() {
-        List<Issue> issues = issuesService.getAllIssuesForProjects("SM");
+	private List<Issue> getIssuesWithChanges() {
+		List<Issue> issues = issuesService.getAllIssuesForProjects(PROJECT_KEY);
 
-        issues.forEach(issue -> {
-            ChangeLog changeLog = new ChangeLog();
-            changeLog.setChanges(issuesService.getChangeLogForIssue(issue.getKey()));
-            issue.setChangelog(changeLog);
-        });
-        return issues;
-    }
+		issues.forEach(issue -> {
+			ChangeLog changeLog = new ChangeLog();
+			changeLog.setChanges(issuesService.getChangeLogForIssue(issue.getKey()));
+			issue.setChangelog(changeLog);
+		});
+		return issues;
+	}
+
+	@Test
+	void testGetAllIssuesForProjects() {
+		List<Issue> issues = issuesService.getAllIssuesForProjects(LocalDate.now().minusDays(7), PROJECT_KEY);
+	}
 }

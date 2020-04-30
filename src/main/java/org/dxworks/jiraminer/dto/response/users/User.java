@@ -5,11 +5,15 @@ import com.google.api.client.util.Key;
 import lombok.Data;
 
 @Data
-public class User {
-    @Key
-    private String displayName;
-    @Key
-    private String accountId;
-    @Key
-    private GenericJson avatarUrls;
+public class User extends GenericJson {
+	@Key
+	private String displayName;
+	@Key
+	private String accountId;
+	@Key
+	private String key;
+	@Key
+	private String emailAddress;
+	@Key
+	private GenericJson avatarUrls;
 }

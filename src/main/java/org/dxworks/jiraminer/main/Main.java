@@ -13,9 +13,13 @@ import org.dxworks.utils.java.rest.client.utils.JsonMapper;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -26,17 +30,25 @@ public class Main {
 	public static final String BASIC = "basic";
 	public static final String DETAILED = "detailed";
 	private static JiraMinerConfigurer jiraMinerConfigurer;
+	private static DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+	private static String afterPrefix = "-after=";
+
 
 	public static void main(String[] args) {
 		log.info("Starting Jira Miner...");
 
 		JiraMinerConfiguration jiraMinerConfiguration = JiraMinerConfiguration.getInstance();
+		LocalDate updatedAfter = Stream.of(args)
+				.filter(arg -> arg.startsWith(afterPrefix)).findFirst()
+				.map(arg -> arg.substring(afterPrefix.length()))
+				.map(dateString -> LocalDate.parse(dateString, dateTimeFormatter))
+				.orElse(null);
 
 		List<Issue> issues = null;
 		try {
 			jiraMinerConfigurer = new JiraMinerConfigurer(jiraMinerConfiguration);
 			issues = jiraMinerConfigurer.configureIssuesService()
-					.getAllIssuesForProjects(jiraMinerConfiguration.getProjects());
+					.getAllIssuesForProjects(updatedAfter, jiraMinerConfiguration.getProjects());
 		} catch (Exception e) {
 			log.error("Error retrieving issues. Please revise your authentication method and try again. \n"
 					+ "If you are using cookie based authentication, please renew the cookie!", e);
