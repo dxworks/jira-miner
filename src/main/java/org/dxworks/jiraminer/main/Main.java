@@ -14,7 +14,6 @@ import org.dxworks.utils.java.rest.client.utils.JsonMapper;
 import java.io.File;
 import java.io.FileWriter;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
@@ -32,23 +31,21 @@ public class Main {
 	private static JiraMinerConfigurer jiraMinerConfigurer;
 	private static DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 	private static String afterPrefix = "-after=";
+	private static String beforePrefix = "-before=";
 
 
 	public static void main(String[] args) {
 		log.info("Starting Jira Miner...");
 
 		JiraMinerConfiguration jiraMinerConfiguration = JiraMinerConfiguration.getInstance();
-		LocalDate updatedAfter = Stream.of(args)
-				.filter(arg -> arg.startsWith(afterPrefix)).findFirst()
-				.map(arg -> arg.substring(afterPrefix.length()))
-				.map(dateString -> LocalDate.parse(dateString, dateTimeFormatter))
-				.orElse(null);
+		LocalDate updatedAfter = getDate(args, afterPrefix);
+		LocalDate updatedBefore = getDate(args, beforePrefix);
 
 		List<Issue> issues = null;
 		try {
 			jiraMinerConfigurer = new JiraMinerConfigurer(jiraMinerConfiguration);
 			issues = jiraMinerConfigurer.configureIssuesService()
-					.getAllIssuesForProjects(updatedAfter, jiraMinerConfiguration.getProjects());
+					.getAllIssuesForProjects(updatedAfter, updatedBefore, jiraMinerConfiguration.getProjects());
 		} catch (Exception e) {
 			log.error("Error retrieving issues. Please revise your authentication method and try again. \n"
 					+ "If you are using cookie based authentication, please renew the cookie!", e);
@@ -70,6 +67,14 @@ public class Main {
 			new ResultExporter().export(issues, allStatuses, getOutputFIle(projectID + "-detailed"));
 		}
 		log.info("Finished Jira Miner.");
+	}
+
+	private static LocalDate getDate(String[] args, String prefix) {
+		return Stream.of(args)
+				.filter(arg -> arg.startsWith(prefix)).findFirst()
+				.map(arg -> arg.substring(prefix.length()))
+				.map(dateString -> LocalDate.parse(dateString, dateTimeFormatter))
+				.orElse(null);
 	}
 
 	private static void ensureResultsFolderExists() {

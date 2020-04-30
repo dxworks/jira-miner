@@ -14,7 +14,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class IssuesServiceIT {
 
@@ -72,7 +72,20 @@ class IssuesServiceIT {
 	}
 
 	@Test
-	void testGetAllIssuesForProjects() {
-		List<Issue> issues = issuesService.getAllIssuesForProjects(LocalDate.now().minusDays(7), PROJECT_KEY);
+	void testGetAllIssuesForProjectsAfter() {
+		List<Issue> issues = issuesService.getAllIssuesForProjects(LocalDate.now().minusDays(7), null, PROJECT_KEY);
+		assertNotNull(issues);
+	}
+
+	@Test
+	void testGetAllIssuesForProjectsBefore() {
+		List<Issue> issues = issuesService.getAllIssuesForProjects(null, LocalDate.now().minusDays(7), PROJECT_KEY);
+		assertNotNull(issues);
+	}
+
+	@Test
+	void testGetAllIssuesForProjectsBetween() {
+		List<Issue> issues = issuesService.getAllIssuesForProjects(LocalDate.now().minusDays(7), LocalDate.now().minusDays(2), PROJECT_KEY);
+		assertNotNull(issues);
 	}
 }
