@@ -7,7 +7,7 @@ import lombok.EqualsAndHashCode;
 import org.dxworks.jiraminer.dto.response.users.User;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = false)
 public class IssueComment extends GenericJson {
     @Key
     private String id;

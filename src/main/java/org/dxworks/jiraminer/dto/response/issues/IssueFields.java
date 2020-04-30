@@ -10,7 +10,7 @@ import org.dxworks.jiraminer.dto.response.users.User;
 import java.util.List;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = false)
 public class IssueFields extends GenericJson {
     @Key
     private Issue parent;
@@ -40,4 +40,6 @@ public class IssueFields extends GenericJson {
     private User assignee;
     @Key
     private Long timeestimate;
+    @Key
+    private Long timespent;
 }

@@ -119,4 +119,9 @@ public class ExportIssue {
      */
     @Key
     private Long timeEstimate;
+    /**
+     * Time spent working on issue in seconds
+     */
+    @Key
+    private Long timeSpent;
 }

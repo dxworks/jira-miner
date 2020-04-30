@@ -72,6 +72,7 @@ public class ResultExporter {
                         .assigneeId(getUserId(issue.getAssignee())).priority(issue.getPriority().getName())
                         .parent(getParent(issue)).subTasks(getSubtasks(issue)).changes(getChanges(issue))
                         .comments(getComments(issue)).timeEstimate(issue.getTimeestimate())
+                        .timeSpent(issue.getTimespent())
                         .customFields(getCustomFields(issue, customFields)).build()).collect(Collectors.toList());
     }
 
