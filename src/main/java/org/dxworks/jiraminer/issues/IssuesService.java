@@ -71,7 +71,7 @@ public class IssuesService extends JiraApiService {
         List<Issue> allIssues = new ArrayList<>();
 
         int startAt = 0;
-        int maxResults = 500;
+        int maxResults = 100;
         int total;
 
         String jqlQuery = createJqlQuery(projectKeys);
