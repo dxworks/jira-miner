@@ -5,11 +5,11 @@ import com.google.api.client.util.Key;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.util.List;
-
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class CommentsSearchResult extends GenericJson {
-    @Key
-    private List<IssueComment> comments;
+public class IssueStatusCategory extends GenericJson {
+	@Key
+	private String name;
+	@Key
+	private String key;
 }

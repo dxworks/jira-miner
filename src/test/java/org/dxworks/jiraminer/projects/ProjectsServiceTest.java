@@ -16,7 +16,7 @@ class ProjectsServiceTest {
 
     @Test
     void getAllProjects() {
-        projectsService = new ProjectsService(JIRA_HOME, TestUtils.getJiraCredentials());
+        projectsService = new ProjectsService(JIRA_HOME, TestUtils.getJiraAuthenticator());
 
         List<Project> projects = projectsService.getAllProjects();
 

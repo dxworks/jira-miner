@@ -4,12 +4,13 @@ import com.google.api.client.json.GenericJson;
 import com.google.api.client.util.Key;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
 import org.dxworks.jiraminer.dto.response.users.User;
 
 import java.util.List;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = false)
 public class IssueFields extends GenericJson {
     @Key
     private Issue parent;
@@ -39,4 +40,6 @@ public class IssueFields extends GenericJson {
     private User assignee;
     @Key
     private Long timeestimate;
+    @Key
+    private Long timespent;
 }

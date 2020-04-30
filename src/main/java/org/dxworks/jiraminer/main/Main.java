@@ -6,7 +6,9 @@ import org.dxworks.jiraminer.configuration.JiraMinerConfiguration;
 import org.dxworks.jiraminer.configuration.JiraMinerConfigurer;
 import org.dxworks.jiraminer.dto.response.issues.Issue;
 import org.dxworks.jiraminer.dto.response.issues.JiraComponent;
+import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
 import org.dxworks.jiraminer.export.ResultExporter;
+import org.dxworks.jiraminer.issues.CommentsService;
 import org.dxworks.utils.java.rest.client.utils.JsonMapper;
 
 import java.io.File;
@@ -23,15 +25,17 @@ public class Main {
 
 	public static final String BASIC = "basic";
 	public static final String DETAILED = "detailed";
+	private static JiraMinerConfigurer jiraMinerConfigurer;
 
-	public static void main(String[] args) throws Exception {
+	public static void main(String[] args) {
 		log.info("Starting Jira Miner...");
 
-		JiraMinerConfiguration jiraMinerConfiguration = new JiraMinerConfiguration();
+		JiraMinerConfiguration jiraMinerConfiguration = JiraMinerConfiguration.getInstance();
 
 		List<Issue> issues = null;
 		try {
-			issues = new JiraMinerConfigurer(jiraMinerConfiguration).configureIssuesService()
+			jiraMinerConfigurer = new JiraMinerConfigurer(jiraMinerConfiguration);
+			issues = jiraMinerConfigurer.configureIssuesService()
 					.getAllIssuesForProjects(jiraMinerConfiguration.getProjects());
 		} catch (Exception e) {
 			log.error("Error retrieving issues. Please revise your authentication method and try again. \n"
@@ -48,7 +52,10 @@ public class Main {
 			writeBasicIssuesToFile(projectID, issues);
 		}
 		if (exportTypes.contains(DETAILED)) {
-			new ResultExporter().export(issues, getOutputFIle(projectID + "-detailed"));
+			CommentsService commentsService = jiraMinerConfigurer.configureCommentsService();
+			issues.forEach(commentsService::addCommentsToIssue);
+			List<IssueStatus> allStatuses = jiraMinerConfigurer.configureStatusesService().getAllStatuses();
+			new ResultExporter().export(issues, allStatuses, getOutputFIle(projectID + "-detailed"));
 		}
 		log.info("Finished Jira Miner.");
 	}

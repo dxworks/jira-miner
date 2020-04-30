@@ -41,7 +41,7 @@ public class ExportIssue {
      * The current status of the Issue
      */
     @Key
-    private String status;
+    private ExportIssueStatus status;
     /**
      * The id of the issue type from ExportReport
      */
@@ -119,4 +119,9 @@ public class ExportIssue {
      */
     @Key
     private Long timeEstimate;
+    /**
+     * Time spent working on issue in seconds
+     */
+    @Key
+    private Long timeSpent;
 }
