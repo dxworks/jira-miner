@@ -1,4 +1,4 @@
-package org.dxworks.jiraminer.issues;
+package org.dxworks.jiraminer.services;
 
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequestInitializer;

@@ -18,7 +18,7 @@ import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.*
 @Slf4j
 public class JiraMinerConfiguration {
     private static JiraMinerConfiguration _instance;
-    private String projectID;
+    private String projectId;
 
     private String jiraHome;
     private List<String> projects;
@@ -46,7 +46,7 @@ public class JiraMinerConfiguration {
         notNull(jiraHome, JIRA_HOME + " can not be null");
         notNull(jiraProjects, JIRA_PROJECTS_FIELD + " can not be null");
 
-        projectID = (String) configurationProperties.getOrDefault(PROJECT_ID, "default");
+        projectId = (String) configurationProperties.getOrDefault(PROJECT_ID, "default");
 
         String jiraAuthentication = configurationProperties.getProperty(JIRA_AUTHENTICATION_FIELD);
 

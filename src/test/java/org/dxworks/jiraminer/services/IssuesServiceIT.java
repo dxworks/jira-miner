@@ -1,4 +1,4 @@
-package org.dxworks.jiraminer.issues;
+package org.dxworks.jiraminer.services;
 
 import org.dxworks.jiraminer.TestUtils;
 import org.dxworks.jiraminer.dto.response.issues.ChangeItem;
@@ -14,7 +14,8 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class IssuesServiceIT {
 

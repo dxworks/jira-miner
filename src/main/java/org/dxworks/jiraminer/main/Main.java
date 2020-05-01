@@ -2,26 +2,31 @@ package org.dxworks.jiraminer.main;
 
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.dxworks.jiraminer.LocalDateFormatter;
+import org.dxworks.jiraminer.cache.CacheDTO;
+import org.dxworks.jiraminer.cache.CacheRepository;
 import org.dxworks.jiraminer.configuration.JiraMinerConfiguration;
 import org.dxworks.jiraminer.configuration.JiraMinerConfigurer;
 import org.dxworks.jiraminer.dto.response.issues.Issue;
 import org.dxworks.jiraminer.dto.response.issues.JiraComponent;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
 import org.dxworks.jiraminer.export.ResultExporter;
-import org.dxworks.jiraminer.issues.CommentsService;
+import org.dxworks.jiraminer.services.CommentsService;
+import org.dxworks.jiraminer.services.IssuesService;
+import org.dxworks.jiraminer.services.StatusesService;
 import org.dxworks.utils.java.rest.client.utils.JsonMapper;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.dxworks.jiraminer.cache.CacheRepository.merge;
 
 @Slf4j
 public class Main {
@@ -29,23 +34,21 @@ public class Main {
 	public static final String BASIC = "basic";
 	public static final String DETAILED = "detailed";
 	private static JiraMinerConfigurer jiraMinerConfigurer;
-	private static DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-	private static String afterPrefix = "-after=";
-	private static String beforePrefix = "-before=";
+	private static final String afterPrefix = "-after=";
+	private static final String beforePrefix = "-before=";
+	private static final CacheRepository cacheRepository = new CacheRepository();
+	private static final LocalDate now = LocalDate.now();
 
 
 	public static void main(String[] args) {
 		log.info("Starting Jira Miner...");
 
 		JiraMinerConfiguration jiraMinerConfiguration = JiraMinerConfiguration.getInstance();
-		LocalDate updatedAfter = getDate(args, afterPrefix);
-		LocalDate updatedBefore = getDate(args, beforePrefix);
+		jiraMinerConfigurer = new JiraMinerConfigurer(jiraMinerConfiguration);
+		ImmutablePair<List<Issue>, List<IssueStatus>> issuesAndStatuses = null;
 
-		List<Issue> issues = null;
 		try {
-			jiraMinerConfigurer = new JiraMinerConfigurer(jiraMinerConfiguration);
-			issues = jiraMinerConfigurer.configureIssuesService()
-					.getAllIssuesForProjects(updatedAfter, updatedBefore, jiraMinerConfiguration.getProjects());
+			issuesAndStatuses = getIssuesAndStatusesCaching(jiraMinerConfiguration);
 		} catch (Exception e) {
 			log.error("Error retrieving issues. Please revise your authentication method and try again. \n"
 					+ "If you are using cookie based authentication, please renew the cookie!", e);
@@ -56,25 +59,43 @@ public class Main {
 		ensureResultsFolderExists();
 		List<String> exportTypes = Optional.ofNullable(jiraMinerConfiguration.getProperty("exportTypes"))
 				.map(types -> asList(types.split(","))).orElse(singletonList(BASIC));
-		String projectID = jiraMinerConfiguration.getProjectID();
+		String projectID = jiraMinerConfiguration.getProjectId();
 		if (exportTypes.contains(BASIC)) {
-			writeBasicIssuesToFile(projectID, issues);
+			writeBasicIssuesToFile(projectID, issuesAndStatuses.left);
 		}
 		if (exportTypes.contains(DETAILED)) {
-			CommentsService commentsService = jiraMinerConfigurer.configureCommentsService();
-			issues.forEach(commentsService::addCommentsToIssue);
-			List<IssueStatus> allStatuses = jiraMinerConfigurer.configureStatusesService().getAllStatuses();
-			new ResultExporter().export(issues, allStatuses, getOutputFIle(projectID + "-detailed"));
+			new ResultExporter().export(issuesAndStatuses.left, issuesAndStatuses.right, getOutputFIle(projectID + "-detailed"));
 		}
 		log.info("Finished Jira Miner.");
 	}
 
-	private static LocalDate getDate(String[] args, String prefix) {
-		return Stream.of(args)
-				.filter(arg -> arg.startsWith(prefix)).findFirst()
-				.map(arg -> arg.substring(prefix.length()))
-				.map(dateString -> LocalDate.parse(dateString, dateTimeFormatter))
-				.orElse(null);
+	private static ImmutablePair<List<Issue>, List<IssueStatus>> getIssuesAndStatusesCaching(JiraMinerConfiguration jiraMinerConfiguration) {
+		IssuesService issuesService = jiraMinerConfigurer.configureIssuesService();
+		CommentsService commentsService = jiraMinerConfigurer.configureCommentsService();
+		StatusesService statusesService = jiraMinerConfigurer.configureStatusesService();
+		String projectId = jiraMinerConfiguration.getProjectId();
+
+		CacheDTO cacheDTO = cacheRepository.read(projectId);
+		List<Issue> issues;
+		if (cacheDTO != null) {
+			List<Issue> newIssues = getIssues(jiraMinerConfiguration, issuesService, commentsService, LocalDateFormatter.parse(cacheDTO.getAt()));
+			issues = merge(cacheDTO.getIssues(), newIssues);
+		} else {
+			issues = getIssues(jiraMinerConfiguration, issuesService, commentsService, null);
+		}
+		List<IssueStatus> allStatuses = statusesService.getAllStatuses();
+
+		cacheRepository.cache(projectId, issues, allStatuses, Main.now);
+		return new ImmutablePair<>(issues, allStatuses);
+	}
+
+	private static List<Issue> getIssues(JiraMinerConfiguration jiraMinerConfiguration,
+										 IssuesService issuesService,
+										 CommentsService commentsService,
+										 LocalDate updatedAfter) {
+		List<Issue> newIssues = issuesService.getAllIssuesForProjects(updatedAfter, null, jiraMinerConfiguration.getProjects());
+		newIssues.forEach(commentsService::addCommentsToIssue);
+		return newIssues;
 	}
 
 	private static void ensureResultsFolderExists() {

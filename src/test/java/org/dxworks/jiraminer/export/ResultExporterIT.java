@@ -4,10 +4,10 @@ import org.dxworks.jiraminer.TestUtils;
 import org.dxworks.jiraminer.dto.response.issues.Issue;
 import org.dxworks.jiraminer.dto.response.issues.IssueField;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
-import org.dxworks.jiraminer.issues.CommentsService;
-import org.dxworks.jiraminer.issues.IssueFieldsService;
-import org.dxworks.jiraminer.issues.IssuesService;
-import org.dxworks.jiraminer.issues.StatusesService;
+import org.dxworks.jiraminer.services.CommentsService;
+import org.dxworks.jiraminer.services.IssueFieldsService;
+import org.dxworks.jiraminer.services.IssuesService;
+import org.dxworks.jiraminer.services.StatusesService;
 import org.dxworks.utils.java.rest.client.providers.AuthenticationProvider;
 import org.junit.jupiter.api.Test;
 

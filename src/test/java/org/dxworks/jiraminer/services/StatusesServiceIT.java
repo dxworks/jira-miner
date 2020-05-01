@@ -1,4 +1,4 @@
-package org.dxworks.jiraminer.issues;
+package org.dxworks.jiraminer.services;
 
 import org.dxworks.jiraminer.TestUtils;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;

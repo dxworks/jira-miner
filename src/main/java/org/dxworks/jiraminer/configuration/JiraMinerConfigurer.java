@@ -1,8 +1,8 @@
 package org.dxworks.jiraminer.configuration;
 
-import org.dxworks.jiraminer.issues.CommentsService;
-import org.dxworks.jiraminer.issues.IssuesService;
-import org.dxworks.jiraminer.issues.StatusesService;
+import org.dxworks.jiraminer.services.CommentsService;
+import org.dxworks.jiraminer.services.IssuesService;
+import org.dxworks.jiraminer.services.StatusesService;
 import org.dxworks.utils.java.rest.client.providers.AuthenticationProvider;
 import org.dxworks.utils.java.rest.client.providers.BasicAuthenticationProvider;
 import org.dxworks.utils.java.rest.client.providers.CookieAuthenticationProvider;

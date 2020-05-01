@@ -10,9 +10,6 @@ import org.dxworks.jiraminer.dto.response.users.User;
 import org.dxworks.utils.java.rest.client.utils.JsonMapper;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -34,7 +31,7 @@ public class ResultExporter {
 			List<IssueField> customFields) {
 		ExportResult exportResult = getExportResult(issues, issueStatuses, customFields);
 
-		new JsonMapper().writeJSON(new OutputStreamWriter(new FileOutputStream(toFile), StandardCharsets.UTF_8), exportResult);
+		new JsonMapper().writeJSONtoFile(toFile, exportResult);
 	}
 
 	public ExportResult getExportResult(List<Issue> issues, List<IssueStatus> issueStatuses,
