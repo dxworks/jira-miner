@@ -2,10 +2,7 @@ package org.dxworks.jiraminer.export;
 
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.dxworks.jiraminer.dto.response.issues.ChangeItem;
-import org.dxworks.jiraminer.dto.response.issues.ChangeLog;
-import org.dxworks.jiraminer.dto.response.issues.Issue;
-import org.dxworks.jiraminer.dto.response.issues.IssueField;
+import org.dxworks.jiraminer.dto.response.issues.*;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueComment;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatusCategory;
@@ -42,38 +39,69 @@ public class ResultExporter {
 
 	public ExportResult getExportResult(List<Issue> issues, List<IssueStatus> issueStatuses,
 			List<IssueField> customFields) {
-		List<ExportIssueStatus> exportIssueStatuses = issueStatuses.stream().map(this::getExportIssueStatus)
+		List<ExportIssueStatus> exportIssueStatuses = issueStatuses.stream()
+				.map(this::getExportIssueStatus)
 				.collect(Collectors.toList());
 
 		List<ExportUser> exportUsers = issues.stream()
-				.flatMap(issue -> Stream.of(issue.getCreator(), issue.getReporter(), issue.getAssignee()))
+				.flatMap(issue -> Stream.concat(Stream.concat(Stream.of(issue.getCreator(), issue.getReporter(), issue.getAssignee()),
+						issue.getComments().stream().flatMap(comment -> Stream.of(comment.getAuthor(), comment.getUpdateAuthor()))),
+						issue.getChangelog().getChanges().stream().map(IssueChange::getAuthor))
+				)
 				.filter(user -> getUserId(user) != null).distinct()
-				.map(user -> ExportUser.builder().id(getUserId(user)).name(user.getDisplayName())
-						.avatarUrl((String) user.getAvatarUrls().get(AVATAR_RESOLUTION)).build())
+				.map(user -> ExportUser.builder()
+						.id(getUserId(user))
+						.name(user.getDisplayName())
+						.avatarUrl((String) user.getAvatarUrls().get(AVATAR_RESOLUTION))
+						.build())
 				.collect(Collectors.toList());
 
-		List<ExportIssueType> exportIssueTypes = issues.stream().map(Issue::getIssuetype).distinct()
-				.map(type -> ExportIssueType.builder().id(type.getId()).name(type.getName())
-						.description(type.getDescription()).isSubTask(type.isSubTask()).build())
+		List<ExportIssueType> exportIssueTypes = issues.stream()
+				.map(Issue::getIssuetype)
+				.distinct()
+				.map(type -> ExportIssueType.builder()
+						.id(type.getId())
+						.name(type.getName())
+						.description(type.getDescription())
+						.isSubTask(type.isSubTask())
+						.build())
 				.collect(Collectors.toList());
 
 		List<ExportIssue> exportIssues = getExportIssues(issues, customFields);
 
-		return ExportResult.builder().issueStatuses(exportIssueStatuses).users(exportUsers).issueTypes(exportIssueTypes)
-				.issues(exportIssues).build();
+		return ExportResult.builder()
+				.issueStatuses(exportIssueStatuses)
+				.users(exportUsers)
+				.issueTypes(exportIssueTypes)
+				.issues(exportIssues)
+				.build();
 	}
 
 	private List<ExportIssue> getExportIssues(List<Issue> issues, List<IssueField> customFields) {
 		return issues.stream()
-				.map(issue -> ExportIssue.builder().key(issue.getKey()).id(issue.getId()).self(issue.getSelf())
-						.summary(issue.getSummary()).description(issue.getDescription())
-						.status(getExportIssueStatus(issue)).typeId(issue.getIssuetype().getId())
-						.type(issue.getIssuetype().getName()).created(issue.getCreated()).updated(issue.getUpdated())
-						.creatorId(getUserId(issue.getCreator())).reporterId(getUserId(issue.getReporter()))
-						.assigneeId(getUserId(issue.getAssignee())).priority(issue.getPriority().getName())
-						.parent(getParent(issue)).subTasks(getSubtasks(issue)).changes(getChanges(issue))
-						.comments(getComments(issue)).timeEstimate(issue.getTimeestimate())
-						.timeSpent(issue.getTimespent()).customFields(getCustomFields(issue, customFields)).build())
+				.map(issue -> ExportIssue.builder()
+						.key(issue.getKey())
+						.id(issue.getId())
+						.self(issue.getSelf())
+						.summary(issue.getSummary())
+						.description(issue.getDescription())
+						.status(getExportIssueStatus(issue))
+						.typeId(issue.getIssuetype().getId())
+						.type(issue.getIssuetype().getName())
+						.created(issue.getCreated())
+						.updated(issue.getUpdated())
+						.creatorId(getUserId(issue.getCreator()))
+						.reporterId(getUserId(issue.getReporter()))
+						.assigneeId(getUserId(issue.getAssignee()))
+						.priority(issue.getPriority().getName())
+						.parent(getParent(issue))
+						.subTasks(getSubtasks(issue))
+						.changes(getChanges(issue))
+						.comments(getComments(issue))
+						.timeEstimate(issue.getTimeestimate())
+						.timeSpent(issue.getTimespent())
+						.customFields(getCustomFields(issue, customFields))
+						.build())
 				.collect(Collectors.toList());
 	}
 
@@ -110,9 +138,14 @@ public class ResultExporter {
 		List<IssueComment> comments = issue.getComments();
 		if (comments == null)
 			return emptyList();
-		return comments.stream().map(comment -> ExportComment.builder().userId(getUserId(comment.getAuthor()))
-				.created(comment.getCreated()).updateUserId(getUserId(comment.getUpdateAuthor()))
-				.updated(comment.getUpdated()).body(comment.getBody()).build()).collect(Collectors.toList());
+		return comments.stream().map(comment -> ExportComment.builder()
+				.userId(getUserId(comment.getAuthor()))
+				.created(comment.getCreated())
+				.updateUserId(getUserId(comment.getUpdateAuthor()))
+				.updated(comment.getUpdated())
+				.body(comment.getBody())
+				.build())
+				.collect(Collectors.toList());
 	}
 
 	private List<ExportChange> getChanges(Issue issue) {
@@ -120,18 +153,27 @@ public class ResultExporter {
 		if (changelog == null)
 			return emptyList();
 		return changelog.getChanges().stream()
-				.map(change -> ExportChange.builder().id(change.getId()).userId(getUserId(change.getAuthor()))
-						.created(change.getCreated()).changedFields(
-								change.getItems().stream().map(ChangeItem::getField).collect(Collectors.toList()))
-						.items(change.getItems().stream().map(item -> ExportChangeItem.builder().field(item.getField())
-								.fromString(item.getFromString()).toString(item.getToString()).from(item.getFrom())
-								.to(item.getTo()).build()).collect(Collectors.toList())).build())
+				.map(change -> ExportChange.builder()
+						.id(change.getId())
+						.userId(getUserId(change.getAuthor()))
+						.created(change.getCreated())
+						.changedFields(change.getItems().stream().map(ChangeItem::getField).collect(Collectors.toList()))
+						.items(change.getItems().stream().map(item -> ExportChangeItem.builder()
+								.field(item.getField())
+								.fromString(item.getFromString())
+								.toString(item.getToString()).from(item.getFrom())
+								.to(item.getTo())
+								.build())
+								.collect(Collectors.toList()))
+						.build())
 				.collect(Collectors.toList());
 	}
 
 	private String getUserId(User user) {
 		Optional<User> userOptional = Optional.ofNullable(user);
 		return userOptional.map(User::getEmailAddress)
-				.orElse(userOptional.map(User::getAccountId).orElse(userOptional.map(User::getKey).orElse(null)));
+				.orElse(userOptional.map(User::getAccountId)
+						.orElse(userOptional.map(User::getKey)
+								.orElse(null)));
 	}
 }
