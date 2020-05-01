@@ -4,6 +4,7 @@ import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpResponse;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.dxworks.jiraminer.JiraApiService;
 import org.dxworks.jiraminer.dto.response.issues.Issue;
 import org.dxworks.jiraminer.dto.response.issues.comments.CommentsSearchResult;
@@ -11,6 +12,7 @@ import org.dxworks.jiraminer.dto.response.issues.comments.IssueComment;
 
 import java.util.List;
 
+@Slf4j
 public class CommentsService extends JiraApiService {
 
     public CommentsService(String jiraHome, HttpRequestInitializer httpRequestInitializer) {
@@ -24,6 +26,7 @@ public class CommentsService extends JiraApiService {
     @SneakyThrows
     public List<IssueComment> getComments(String issueKey) {
         String apiPath = getApiPath("issue", issueKey, "comment");
+        log.info("Getting comments for issue {}.", issueKey);
         HttpResponse httpResponse = httpClient.get(new GenericUrl(apiPath));
 
         return httpResponse.parseAs(CommentsSearchResult.class).getComments();
