@@ -94,7 +94,7 @@
                 </executions>
                 <configuration>
                     <repository>dxworks/jiraminer</repository>
-                    <tag>${project.version}</tag>
+                    <tag>latest</tag>
                     <buildArgs>
                         <JAR_FILE>${jar.final.name}.jar</JAR_FILE>
                     </buildArgs>
