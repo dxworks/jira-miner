@@ -8,6 +8,7 @@ import org.dxworks.utils.java.rest.client.utils.JsonMapper;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
@@ -39,18 +40,18 @@ public class CacheRepository {
 				.issues(issues)
 				.statuses(statuses)
 				.at(LocalDateFormatter.format(at))
-				.build());
+				.build(), StandardCharsets.UTF_8);
 	}
 
 	public CacheDTO read(String project) {
 		try {
-			return jsonMapper.readJSONfromFile(getCacheFile(project), CacheDTO.class);
+			return jsonMapper.readJSONfromFile(getCacheFile(project), CacheDTO.class, StandardCharsets.UTF_8);
 		} catch (IOException e) {
 			return null;
 		}
 	}
 
 	private File getCacheFile(String project) {
-		return CACHE_DIR_PATH.resolve(project).toFile();
+		return CACHE_DIR_PATH.resolve(project + ".json").toFile();
 	}
 }
