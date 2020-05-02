@@ -3,18 +3,54 @@ This app is a command line application built to extract Issue information from J
 
 Visit us on [Github](https://github.com/dxworks/jira-miner).
 ## Features
-The application extracts the following fields from all JIRA Issues from the desired projects:
+The application extracts the following fields from all JIRA Issues for the desired projects:
+
+####basic
 ```     
-      key: String;
-      issueType: String;
-      parentKey: String;
-      status: String;
-      startDate: String;
-      endDate: String;
-      summary: String;
-      description: String;
-      components: List<String>;
+    key: String
+    issueType: String
+    parentKey: String
+    status: String
+    startDate: String
+    endDate: String
+    summary: String
+    description: String
+    components: List<String>
+``` 
+
+####detailed
+```     
+    issueStatuses: List<ExportIssueStatus>
+    issueTypes: private List<ExportIssueType>
+    users: private List<ExportUser>
+    issues: private List<ExportIssue> 
 ```
+where:
+
+#####ExportIssueStatus
+```
+    name: String
+    id: String
+    statusCategory: {
+        name: String
+        key: String
+    }
+```
+#####ExportIssueType
+```
+    name: String
+    id: String
+    description: String
+    isSubTask: Boolean
+```
+#####ExportUser
+```
+    name: String
+    id: String
+    avatarUrl: String
+```
+#####ExportIssue: check it out [here](https://github.com/dxworks/jira-miner/blob/master/src/main/java/org/dxworks/jiraminer/export/ExportIssue.java)
+
 ## Accessing the JIRA REST API
 Before using the app, make sure you can access the JIRA REST API. go to your Jira page and log in. The access the following link:
 `<your_jira_home>/rest/api/2/serverInfo`.
@@ -42,9 +78,10 @@ The server response should be a JSON that looks similar to this one:
 To run the application you first need to create a file called `config/jiraminer-config.properties` in the `config` folder next to the runnable files.
 An example configuration file for a local environment could be:
 ```$xslt
-projectID=
+projectID=yourProjectID
 jira_home=http://localhost:6060
 projects=COM
+exportTypes=detailed,basic
 authentication=cookie
 cookie=JSESSIONID=E96741F7E5C783D3FCC7E82E3874D51B; atlassian.xsrf.token=BBPK-PX8B-NPTB-5W5S_babd22b7c0c76f69c628902b0a08daf1e9bdb609_lin
 ```
@@ -60,6 +97,9 @@ The url to the jira instance you want to extract the issues from. Examples: `htt
 #### projects
 A list of comma separated strings representing the JIRA project IDs you want to extract issues from. For example if we would have 3 projects in our JIRA instance with the IDs: PRO, NUL and SAN and we sould only want the issues from NUL and SAN, we would populate the projects field as follows: 
 `projects=NUL,SAM`
+
+#### exportTypes
+A list of comma separated types for export. Available types are `basic` and `detailed`, basic by default (if property is ommited). 
 
 #### authentication
 There are 4 possible values for this field:
@@ -103,6 +143,7 @@ To get the cookie from your browser, open the _Developer Console_ (right click a
 You should see a new Window open in your browser. Search for the _Network_ tab and refresh the page. You should see a list of requests being made.
 Amongst them should be a request to _serverInfo_. Click on that request and look at the `Request Headers` Section. Copy the Cookie field value in the configuration file. 
 ![](docs/jiraminer-cookie.jpg)
+
 NOTE: You may have multiple fields in your cookie. Copy the entire Cookie to the `jiraminer-config.properties` under the cookie field.
 
 ##### oauth
@@ -112,4 +153,6 @@ The default value for the authentication field. If selected, and if the JIRA ser
 
 
 ## Run
-Run the `jiraminer.sh` or `jiraminer.bat` scripts to run the application after you have entered all fields to the configuration file (`config/jiraminer-config.properties`)
+Run the `jiraminer.sh` or `jiraminer.bat` scripts to run the application after you have entered all fields to the configuration file (`config/jiraminer-config.properties`). You will find the output in the results folder.
+
+NOTE: The app caches the response for each project and at a later date will request only the issues updated after the cache date. To prevent this you may delete the file at `cache/yourProjectID`. 
