@@ -1,1 +1,1 @@
-java -jar jira-miner-1.0-SNAPSHOT.jar
+java -jar jiraminer.jar
