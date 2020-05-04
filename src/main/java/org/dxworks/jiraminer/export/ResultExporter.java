@@ -43,7 +43,7 @@ public class ResultExporter {
 				.flatMap(issue -> Stream.concat(Stream.concat(Stream.of(issue.getCreator(), issue.getReporter(), issue.getAssignee()),
 						issue.getComments().stream().flatMap(comment -> Stream.of(comment.getAuthor(), comment.getUpdateAuthor()))),
 						issue.getChangelog().getChanges().stream().map(IssueChange::getAuthor))
-				).distinct()
+				).filter(user -> user != null && user.getSelf() != null).distinct()
 				.map(user -> ExportUser.builder()
 						.self(user.getSelf())
 						.key(user.getKey())
