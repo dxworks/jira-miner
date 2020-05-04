@@ -21,4 +21,8 @@ public class IssueComment extends GenericJson {
     private User author;
     @Key
     private User updateAuthor;
+
+    public String getUserId() {
+        return getAuthor() != null ? getAuthor().getSelf() : null;
+    }
 }

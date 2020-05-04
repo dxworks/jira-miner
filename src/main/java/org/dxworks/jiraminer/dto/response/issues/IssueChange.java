@@ -17,4 +17,8 @@ public class IssueChange extends GenericJson {
     private User author;
     @Key
     private List<ChangeItem> items;
+
+    public String getUserId() {
+        return getAuthor() != null ? getAuthor().getSelf() : null;
+    }
 }
