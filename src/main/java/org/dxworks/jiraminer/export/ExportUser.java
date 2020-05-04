@@ -8,7 +8,13 @@ import lombok.Data;
 @Builder
 public class ExportUser {
     @Key
-    private String id;
+    private String self;
+    @Key
+    private String accountId;
+    @Key
+    private String key;
+    @Key
+    private String emailAddress;
     @Key
     private String name;
     @Key

@@ -7,6 +7,8 @@ import lombok.Data;
 @Data
 public class User extends GenericJson {
 	@Key
+	private String self;
+	@Key
 	private String displayName;
 	@Key
 	private String accountId;

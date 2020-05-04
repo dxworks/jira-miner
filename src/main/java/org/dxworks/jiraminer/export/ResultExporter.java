@@ -6,7 +6,6 @@ import org.dxworks.jiraminer.dto.response.issues.*;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueComment;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatusCategory;
-import org.dxworks.jiraminer.dto.response.users.User;
 import org.dxworks.utils.java.rest.client.utils.JsonMapper;
 
 import java.io.File;
@@ -44,10 +43,12 @@ public class ResultExporter {
 				.flatMap(issue -> Stream.concat(Stream.concat(Stream.of(issue.getCreator(), issue.getReporter(), issue.getAssignee()),
 						issue.getComments().stream().flatMap(comment -> Stream.of(comment.getAuthor(), comment.getUpdateAuthor()))),
 						issue.getChangelog().getChanges().stream().map(IssueChange::getAuthor))
-				)
-				.filter(user -> getUserId(user) != null).distinct()
+				).distinct()
 				.map(user -> ExportUser.builder()
-						.id(getUserId(user))
+						.self(user.getSelf())
+						.key(user.getKey())
+						.accountId(user.getAccountId())
+						.emailAddress(user.getEmailAddress())
 						.name(user.getDisplayName())
 						.avatarUrl((String) user.getAvatarUrls().get(AVATAR_RESOLUTION))
 						.build())
@@ -87,9 +88,9 @@ public class ResultExporter {
 						.type(issue.getIssuetype().getName())
 						.created(issue.getCreated())
 						.updated(issue.getUpdated())
-						.creatorId(getUserId(issue.getCreator()))
-						.reporterId(getUserId(issue.getReporter()))
-						.assigneeId(getUserId(issue.getAssignee()))
+						.creatorId(issue.getCreator().getSelf())
+						.reporterId(issue.getReporter().getSelf())
+						.assigneeId(issue.getAssignee().getSelf())
 						.priority(issue.getPriority().getName())
 						.parent(getParent(issue))
 						.subTasks(getSubtasks(issue))
@@ -136,9 +137,9 @@ public class ResultExporter {
 		if (comments == null)
 			return emptyList();
 		return comments.stream().map(comment -> ExportComment.builder()
-				.userId(getUserId(comment.getAuthor()))
+				.userId(comment.getAuthor().getSelf())
 				.created(comment.getCreated())
-				.updateUserId(getUserId(comment.getUpdateAuthor()))
+				.updateUserId(comment.getUpdateAuthor().getSelf())
 				.updated(comment.getUpdated())
 				.body(comment.getBody())
 				.build())
@@ -152,7 +153,7 @@ public class ResultExporter {
 		return changelog.getChanges().stream()
 				.map(change -> ExportChange.builder()
 						.id(change.getId())
-						.userId(getUserId(change.getAuthor()))
+						.userId(change.getAuthor().getSelf())
 						.created(change.getCreated())
 						.changedFields(change.getItems().stream().map(ChangeItem::getField).collect(Collectors.toList()))
 						.items(change.getItems().stream().map(item -> ExportChangeItem.builder()
@@ -164,13 +165,5 @@ public class ResultExporter {
 								.collect(Collectors.toList()))
 						.build())
 				.collect(Collectors.toList());
-	}
-
-	private String getUserId(User user) {
-		Optional<User> userOptional = Optional.ofNullable(user);
-		return userOptional.map(User::getEmailAddress)
-				.orElse(userOptional.map(User::getAccountId)
-						.orElse(userOptional.map(User::getKey)
-								.orElse(null)));
 	}
 }
