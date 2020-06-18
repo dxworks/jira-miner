@@ -2,16 +2,13 @@ package org.dxworks.jiraminer.projects;
 
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequestInitializer;
-import com.google.api.client.http.HttpResponse;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.reflect.TypeToken;
 import lombok.SneakyThrows;
 import org.dxworks.jiraminer.JiraApiService;
 import org.dxworks.jiraminer.dto.response.projects.Project;
+import org.dxworks.utils.java.rest.client.response.HttpResponse;
 
-import java.lang.reflect.Type;
 import java.util.List;
-import java.util.Properties;
 
 import static java.util.Arrays.asList;
 

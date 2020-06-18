@@ -2,13 +2,13 @@ package org.dxworks.jiraminer.services;
 
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequestInitializer;
-import com.google.api.client.http.HttpResponse;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.dxworks.jiraminer.JiraApiService;
 import org.dxworks.jiraminer.dto.response.issues.Issue;
 import org.dxworks.jiraminer.dto.response.issues.comments.CommentsSearchResult;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueComment;
+import org.dxworks.utils.java.rest.client.response.HttpResponse;
 
 import java.util.List;
 
