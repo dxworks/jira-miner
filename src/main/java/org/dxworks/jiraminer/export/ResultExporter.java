@@ -28,13 +28,13 @@ public class ResultExporter {
     @SneakyThrows
     public void export(List<Issue> issues, List<IssueStatus> issueStatuses, File toFile,
                        List<IssueField> customFields) {
-        ExportResult exportResult = getExportResult(issues, issueStatuses, customFields);
+        JiraProjectResult exportResult = getExportResult(issues, issueStatuses, customFields);
 
         new JsonMapper().writeJSONtoFile(toFile, exportResult);
     }
 
-    public ExportResult getExportResult(List<Issue> issues, List<IssueStatus> issueStatuses,
-                                        List<IssueField> customFields) {
+    public JiraProjectResult getExportResult(List<Issue> issues, List<IssueStatus> issueStatuses,
+                                             List<IssueField> customFields) {
         List<ExportIssueStatus> exportIssueStatuses = issueStatuses.stream()
                 .map(this::getExportIssueStatus)
                 .collect(Collectors.toList());
@@ -67,7 +67,7 @@ public class ResultExporter {
 
         List<ExportIssue> exportIssues = getExportIssues(issues, customFields);
 
-        return ExportResult.builder()
+        return JiraProjectResult.builder()
                 .issueStatuses(exportIssueStatuses)
                 .users(exportUsers)
                 .issueTypes(exportIssueTypes)

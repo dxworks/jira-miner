@@ -7,12 +7,11 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.util.List;
-import java.util.Map;
 
 @Data
 @Builder
 @EqualsAndHashCode(callSuper = false)
-public class ExportResult extends GenericJson {
+public class JiraProjectResult extends GenericJson {
     @Key
     private List<ExportIssueStatus> issueStatuses;
     @Key
