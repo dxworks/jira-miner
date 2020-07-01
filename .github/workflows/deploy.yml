@@ -7,7 +7,8 @@ on:
       - master
 
 jobs:
-  deploy:
+  deploy-github:
+    name: Publish - Github Packages
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
@@ -20,3 +21,24 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  deploy-docker:
+    name: Publish - Docker Hub
+    runs-on: ubuntu-18.04
+    env:
+      REPO: dxworks/jiraminer
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v1
+      - name: Set up Java for publishing to Docker Hub
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+      - name: Build target
+        run: mvn clean package
+      - name: Login to Docker Hub
+        run: docker login -u ${{ secrets.DOCKER_USERNAME }}
+          -p ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build Docker image
+        run: docker build -t $REPO:latest -t $REPO:${GITHUB_SHA::8} .
+      - name: Publish Docker image
+        run: docker push $REPO

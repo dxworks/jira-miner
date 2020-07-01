@@ -1,0 +1,19 @@
+name: Build
+
+# Run mvn clean install on pull requests
+on:  pull_request
+
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Java for build
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+      - name: Build
+        run: mvn clean install
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
