@@ -5,7 +5,7 @@ Visit us on [Github](https://github.com/dxworks/jira-miner).
 ## Features
 The application extracts the following fields from all JIRA Issues for the desired projects:
 
-####basic
+#### basic
 ```     
     key: String
     issueType: String
@@ -18,7 +18,7 @@ The application extracts the following fields from all JIRA Issues for the desir
     components: List<String>
 ``` 
 
-####detailed
+#### detailed
 ```     
     issueStatuses: List<ExportIssueStatus>
     issueTypes: private List<ExportIssueType>
@@ -27,7 +27,7 @@ The application extracts the following fields from all JIRA Issues for the desir
 ```
 where:
 
-#####ExportIssueStatus
+##### ExportIssueStatus
 ```
     name: String
     id: String
@@ -36,20 +36,20 @@ where:
         key: String
     }
 ```
-#####ExportIssueType
+##### ExportIssueType
 ```
     name: String
     id: String
     description: String
     isSubTask: Boolean
 ```
-#####ExportUser
+##### ExportUser
 ```
     name: String
     id: String
     avatarUrl: String
 ```
-#####ExportIssue: check it out [here](https://github.com/dxworks/jira-miner/blob/master/src/main/java/org/dxworks/jiraminer/export/ExportIssue.java)
+##### ExportIssue: check it out [here](https://github.com/dxworks/jira-miner/blob/master/src/main/java/org/dxworks/jiraminer/export/ExportIssue.java)
 
 ## Accessing the JIRA REST API
 Before using the app, make sure you can access the JIRA REST API. go to your Jira page and log in. The access the following link:
