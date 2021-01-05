@@ -56,7 +56,7 @@ public class Main {
 				int statusCode = exception.getStatusCode();
 				if (statusCode == 401 || statusCode == 404) {
 					log.error("Error retrieving issues. Please revise your authentication method and try again. \n"
-							+ "If you are using cookie based authentication, please renew the cookie!");
+							+ "If you are using cookie based authentication, please renew the cookie!", e);
 					System.exit(1);
 				}
 			}
