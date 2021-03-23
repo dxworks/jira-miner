@@ -1,4 +1,4 @@
-package org.dxworks.jiraminer.projects;
+package org.dxworks.jiraminer.services;
 
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequestInitializer;
@@ -27,7 +27,7 @@ public class ProjectsService extends JiraApiService {
 
         String apiPath = getApiPath("project");
 
-        HttpResponse httpResponse = httpClient.get(new GenericUrl(apiPath));
+        HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
         return asList(httpResponse.parseAs(Project[].class));
     }
 
@@ -36,7 +36,7 @@ public class ProjectsService extends JiraApiService {
 
         String apiPath = getApiPath(ImmutableMap.of("projectKey", projectKey), "project", ":projectKey");
 
-        HttpResponse httpResponse = httpClient.get(new GenericUrl(apiPath));
+        HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
 
         return httpResponse.parseAs(Project.class);
     }

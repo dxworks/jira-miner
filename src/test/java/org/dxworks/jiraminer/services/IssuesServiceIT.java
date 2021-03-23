@@ -4,6 +4,8 @@ import org.dxworks.jiraminer.TestUtils;
 import org.dxworks.jiraminer.dto.response.issues.ChangeItem;
 import org.dxworks.jiraminer.dto.response.issues.ChangeLog;
 import org.dxworks.jiraminer.dto.response.issues.Issue;
+import org.dxworks.jiraminer.dto.response.issues.IssueChange;
+import org.dxworks.jiraminer.dto.response.issues.worklog.WorkLog;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -14,8 +16,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class IssuesServiceIT {
 
@@ -88,5 +89,14 @@ class IssuesServiceIT {
 	void testGetAllIssuesForProjectsBetween() {
 		List<Issue> issues = issuesService.getAllIssuesForProjects(LocalDate.now().minusDays(7), LocalDate.now().minusDays(2), PROJECT_KEY);
 		assertNotNull(issues);
+	}
+
+	@Test
+	void testGetWorkLogsForIssue() {
+		List<WorkLog> workLogs = issuesService.getAllIssuesForProjects(PROJECT_KEY).stream()
+				.flatMap(issue -> issuesService.getWorkLogsForIssue(issue.getKey()).stream())
+				.collect(Collectors.toList());
+		assertFalse(workLogs.isEmpty());
+
 	}
 }

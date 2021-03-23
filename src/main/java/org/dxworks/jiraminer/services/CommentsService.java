@@ -27,7 +27,7 @@ public class CommentsService extends JiraApiService {
     public List<IssueComment> getComments(String issueKey) {
         String apiPath = getApiPath("issue", issueKey, "comment");
         log.info("Getting comments for issue {}.", issueKey);
-        HttpResponse httpResponse = httpClient.get(new GenericUrl(apiPath));
+        HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
 
         return httpResponse.parseAs(CommentsSearchResult.class).getComments();
     }

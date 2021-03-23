@@ -9,6 +9,7 @@ import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatusCategory;
 import org.dxworks.utils.java.rest.client.utils.JsonMapper;
 
 import java.io.File;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,7 +31,7 @@ public class ResultExporter {
                        List<IssueField> customFields) {
         JiraProjectResult exportResult = getExportResult(issues, issueStatuses, customFields);
 
-        new JsonMapper().writeJSONtoFile(toFile, exportResult);
+        new JsonMapper().writeJSONtoFile(toFile, exportResult, Charset.defaultCharset());
     }
 
     public JiraProjectResult getExportResult(List<Issue> issues, List<IssueStatus> issueStatuses,

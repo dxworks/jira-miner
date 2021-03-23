@@ -44,11 +44,7 @@ public class CacheRepository {
 	}
 
 	public CacheDTO read(String project) {
-		try {
-			return jsonMapper.readJSONfromFile(getCacheFile(project), CacheDTO.class, StandardCharsets.UTF_8);
-		} catch (IOException e) {
-			return null;
-		}
+		return jsonMapper.readJSONfromFile(getCacheFile(project), CacheDTO.class, StandardCharsets.UTF_8);
 	}
 
 	private File getCacheFile(String project) {
