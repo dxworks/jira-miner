@@ -10,6 +10,8 @@ import org.dxworks.jiraminer.dto.request.issues.JiraIssuesRequestBody;
 import org.dxworks.jiraminer.dto.response.issues.Issue;
 import org.dxworks.jiraminer.dto.response.issues.IssueChange;
 import org.dxworks.jiraminer.dto.response.issues.IssueSearchResult;
+import org.dxworks.jiraminer.dto.response.issues.worklog.WorkLog;
+import org.dxworks.jiraminer.dto.response.issues.worklog.WorkLogsResponse;
 import org.dxworks.jiraminer.pagination.IssueChangelogUrl;
 import org.dxworks.utils.java.rest.client.response.HttpResponse;
 
@@ -49,11 +51,8 @@ public class IssuesService extends JiraApiService {
         int total;
 
         do {
-
-            HttpResponse httpResponse = httpClient.get(new IssueChangelogUrl(apiPath, startAt, maxResults));
-
+            HttpResponse httpResponse = getHttpClient().get(new IssueChangelogUrl(apiPath, startAt, maxResults), null);
             Issue issue = httpResponse.parseAs(Issue.class);
-
             allChanges.addAll(issue.getChangelog().getChanges());
 
             total = issue.getChangelog().getTotal();
@@ -62,6 +61,30 @@ public class IssuesService extends JiraApiService {
         } while (startAt < total);
 
         return allChanges;
+    }
+
+    public List<WorkLog> getWorkLogsForIssue(String issueKey) {
+        return getWorkLogsForIssue(issueKey, 0);
+    }
+
+    public List<WorkLog> getWorkLogsForIssue(String issueKey, int startAt) {
+        String apiPath = getApiPath(ImmutableMap.of("issueId", issueKey), "issue", ":issueId", "worklog");
+
+        List<WorkLog> allWorkLogs = new ArrayList<>();
+        int maxResults = 100;
+        int total;
+
+        do {
+            HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
+            WorkLogsResponse workLogsResponse = httpResponse.parseAs(WorkLogsResponse.class);
+            allWorkLogs.addAll(workLogsResponse.getWorklogs());
+
+            total = workLogsResponse.getTotal();
+            startAt = startAt + maxResults;
+            log.info("Got work logs for issue {} ({}/{})", issueKey, Math.min(startAt, total), total);
+        } while (startAt < total);
+
+        return allWorkLogs;
     }
 
     public List<Issue> getAllIssuesForProjects(List<String> projectKeys) {
@@ -107,8 +130,8 @@ public class IssuesService extends JiraApiService {
 
     @SneakyThrows
     private IssueSearchResult searchIssues(String apiPath, String jqlQuery, int maxResults, int startAt) {
-        HttpResponse httpResponse = httpClient.post(new GenericUrl(apiPath),
-                new JiraIssuesRequestBody(jqlQuery, startAt, maxResults, singletonList("changelog")));
+        HttpResponse httpResponse = getHttpClient().post(new GenericUrl(apiPath),
+                new JiraIssuesRequestBody(jqlQuery, startAt, maxResults, singletonList("changelog")), null);
         return httpResponse.parseAs(IssueSearchResult.class);
     }
 

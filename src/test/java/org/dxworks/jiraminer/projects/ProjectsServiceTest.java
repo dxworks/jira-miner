@@ -2,6 +2,7 @@ package org.dxworks.jiraminer.projects;
 
 import org.dxworks.jiraminer.TestUtils;
 import org.dxworks.jiraminer.dto.response.projects.Project;
+import org.dxworks.jiraminer.services.ProjectsService;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

@@ -25,7 +25,7 @@ public class IssueFieldsService extends JiraApiService {
     public List<IssueField> getFields() {
         String apiPath = getApiPath("field");
 
-        HttpResponse httpResponse = httpClient.get(new GenericUrl(apiPath));
+        HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
 
         return asList(httpResponse.parseAs(IssueField[].class));
     }
