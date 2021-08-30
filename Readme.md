@@ -2,77 +2,6 @@
 This app is a command line application built to extract Issue information from JIRA. 
 
 Visit us on [Github](https://github.com/dxworks/jira-miner).
-## Features
-The application extracts the following fields from all JIRA Issues for the desired projects:
-
-#### basic
-```     
-    key: String
-    issueType: String
-    parentKey: String
-    status: String
-    startDate: String
-    endDate: String
-    summary: String
-    description: String
-    components: List<String>
-``` 
-
-#### detailed
-```     
-    issueStatuses: List<ExportIssueStatus>
-    issueTypes: private List<ExportIssueType>
-    users: private List<ExportUser>
-    issues: private List<ExportIssue> 
-```
-where:
-
-##### ExportIssueStatus
-```
-    name: String
-    id: String
-    statusCategory: {
-        name: String
-        key: String
-    }
-```
-##### ExportIssueType
-```
-    name: String
-    id: String
-    description: String
-    isSubTask: Boolean
-```
-##### ExportUser
-```
-    name: String
-    id: String
-    avatarUrl: String
-```
-##### ExportIssue: check it out [here](https://github.com/dxworks/jira-miner/blob/master/src/main/java/org/dxworks/jiraminer/export/ExportIssue.java)
-
-## Accessing the JIRA REST API
-Before using the app, make sure you can access the JIRA REST API. go to your Jira page and log in. The access the following link:
-`<your_jira_home>/rest/api/2/serverInfo`.
-
-The server response should be a JSON that looks similar to this one:
-```$xslt
-{
-    baseUrl: "<jira_home>",
-    version: "8.3.4",
-    versionNumbers: [
-        8,
-        3,
-        4
-    ],
-    deploymentType: "Server",
-    buildDate: "2019-09-13T00:00:00.000+0300",
-    databaseBuildNumber: 803005,
-    ...
-    serverTitle: "Jira"
-}
-```
-
 
 ## Configuration
 To run the application you first need to create a file called `config/jiraminer-config.properties` in the `config` folder next to the runnable files.
@@ -156,3 +85,74 @@ The default value for the authentication field. If selected, and if the JIRA ser
 Run the `jiraminer.sh` or `jiraminer.bat` scripts to run the application after you have entered all fields to the configuration file (`config/jiraminer-config.properties`). You will find the output in the results folder.
 
 NOTE: The app caches the response for each project and at a later date will request only the issues updated after the cache date. To prevent this you may delete the file at `cache/yourProjectID`. 
+
+## Export Data Format
+The application extracts the following fields from all JIRA Issues for the desired projects:
+
+#### basic
+```     
+    key: String
+    issueType: String
+    parentKey: String
+    status: String
+    startDate: String
+    endDate: String
+    summary: String
+    description: String
+    components: List<String>
+``` 
+
+#### detailed
+```     
+    issueStatuses: List<ExportIssueStatus>
+    issueTypes: private List<ExportIssueType>
+    users: private List<ExportUser>
+    issues: private List<ExportIssue> 
+```
+where:
+
+##### ExportIssueStatus
+```
+    name: String
+    id: String
+    statusCategory: {
+        name: String
+        key: String
+    }
+```
+##### ExportIssueType
+```
+    name: String
+    id: String
+    description: String
+    isSubTask: Boolean
+```
+##### ExportUser
+```
+    name: String
+    id: String
+    avatarUrl: String
+```
+##### ExportIssue: check it out [here](https://github.com/dxworks/jira-miner/blob/master/src/main/java/org/dxworks/jiraminer/export/ExportIssue.java)
+
+## Accessing the JIRA REST API
+Before using the app, make sure you can access the JIRA REST API. go to your Jira page and log in. The access the following link:
+`<your_jira_home>/rest/api/2/serverInfo`.
+
+The server response should be a JSON that looks similar to this one:
+```$xslt
+{
+    baseUrl: "<jira_home>",
+    version: "8.3.4",
+    versionNumbers: [
+        8,
+        3,
+        4
+    ],
+    deploymentType: "Server",
+    buildDate: "2019-09-13T00:00:00.000+0300",
+    databaseBuildNumber: 803005,
+    ...
+    serverTitle: "Jira"
+}
+```
