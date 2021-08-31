@@ -2,6 +2,7 @@ package org.dxworks.jiraminer.configuration;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -39,7 +40,7 @@ public class JiraMinerConfiguration {
     private void readConfigurationFile() {
         log.info("Reading configuration file...");
         configurationProperties = readConfiguration();
-        jiraHome = configurationProperties.getProperty(JIRA_HOME);
+        jiraHome = StringUtils.stripEnd(configurationProperties.getProperty(JIRA_HOME), "/");
         String jiraProjects = configurationProperties.getProperty(JIRA_PROJECTS_FIELD);
         projects = Arrays.asList(jiraProjects.split(","));
 
