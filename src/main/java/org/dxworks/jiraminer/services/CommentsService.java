@@ -10,6 +10,7 @@ import org.dxworks.jiraminer.dto.response.issues.comments.CommentsSearchResult;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueComment;
 import org.dxworks.utils.java.rest.client.response.HttpResponse;
 
+import java.util.Collections;
 import java.util.List;
 
 @Slf4j
@@ -29,7 +30,9 @@ public class CommentsService extends JiraApiService {
         log.info("Getting comments for issue {}.", issueKey);
         HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
 
-        return httpResponse.parseAs(CommentsSearchResult.class).getComments();
+        return parseIfOk(httpResponse, CommentsSearchResult.class)
+                .map(CommentsSearchResult::getComments)
+                .orElseGet(Collections::emptyList);
     }
 
     public void addCommentsToIssue(Issue issue) {

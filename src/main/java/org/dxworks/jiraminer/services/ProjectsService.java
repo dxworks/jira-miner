@@ -9,8 +9,7 @@ import org.dxworks.jiraminer.dto.response.projects.Project;
 import org.dxworks.utils.java.rest.client.response.HttpResponse;
 
 import java.util.List;
-
-import static java.util.Arrays.asList;
+import java.util.Optional;
 
 public class ProjectsService extends JiraApiService {
 
@@ -28,17 +27,17 @@ public class ProjectsService extends JiraApiService {
         String apiPath = getApiPath("project");
 
         HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
-        return asList(httpResponse.parseAs(Project[].class));
+        return parseListIfOk(httpResponse, Project[].class);
     }
 
     @SneakyThrows
-    public Project getProject(String projectKey) {
+    public Optional<Project> getProject(String projectKey) {
 
         String apiPath = getApiPath(ImmutableMap.of("projectKey", projectKey), "project", ":projectKey");
 
         HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
 
-        return httpResponse.parseAs(Project.class);
+        return parseIfOk(httpResponse, Project.class);
     }
 
 }

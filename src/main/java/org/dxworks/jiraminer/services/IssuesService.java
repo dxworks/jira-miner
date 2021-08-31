@@ -7,6 +7,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.dxworks.jiraminer.JiraApiService;
 import org.dxworks.jiraminer.dto.request.issues.JiraIssuesRequestBody;
+import org.dxworks.jiraminer.dto.response.issues.ChangeLog;
 import org.dxworks.jiraminer.dto.response.issues.Issue;
 import org.dxworks.jiraminer.dto.response.issues.IssueChange;
 import org.dxworks.jiraminer.dto.response.issues.IssueSearchResult;
@@ -52,10 +53,10 @@ public class IssuesService extends JiraApiService {
 
         do {
             HttpResponse httpResponse = getHttpClient().get(new IssueChangelogUrl(apiPath, startAt, maxResults), null);
-            Issue issue = httpResponse.parseAs(Issue.class);
-            allChanges.addAll(issue.getChangelog().getChanges());
+            Optional<Issue> issue = parseIfOk(httpResponse, Issue.class);
+            issue.map(Issue::getChangelog).map(ChangeLog::getChanges).ifPresent(allChanges::addAll);
 
-            total = issue.getChangelog().getTotal();
+            total = issue.map(Issue::getChangelog).map(ChangeLog::getTotal).orElse(0);
             startAt = startAt + maxResults;
             log.info("Got changes for issue {} ({}/{})", issueKey, Math.min(startAt, total), total);
         } while (startAt < total);
@@ -76,10 +77,10 @@ public class IssuesService extends JiraApiService {
 
         do {
             HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
-            WorkLogsResponse workLogsResponse = httpResponse.parseAs(WorkLogsResponse.class);
-            allWorkLogs.addAll(workLogsResponse.getWorklogs());
+            Optional<WorkLogsResponse> workLogsResponse = parseIfOk(httpResponse, WorkLogsResponse.class);
+            workLogsResponse.map(WorkLogsResponse::getWorklogs).ifPresent(allWorkLogs::addAll);
 
-            total = workLogsResponse.getTotal();
+            total = workLogsResponse.map(WorkLogsResponse::getTotal).orElse(0);
             startAt = startAt + maxResults;
             log.info("Got work logs for issue {} ({}/{})", issueKey, Math.min(startAt, total), total);
         } while (startAt < total);
@@ -132,7 +133,7 @@ public class IssuesService extends JiraApiService {
     private IssueSearchResult searchIssues(String apiPath, String jqlQuery, int maxResults, int startAt) {
         HttpResponse httpResponse = getHttpClient().post(new GenericUrl(apiPath),
                 new JiraIssuesRequestBody(jqlQuery, startAt, maxResults, singletonList("changelog")), null);
-        return httpResponse.parseAs(IssueSearchResult.class);
+        return parseIfOk(httpResponse, IssueSearchResult.class).orElseGet(IssueSearchResult::new);
     }
 
     private String createJqlQuery(LocalDate updatedAfter, LocalDate updatedBefore, String... existingJiraProjects) {
