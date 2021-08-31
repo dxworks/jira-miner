@@ -43,7 +43,7 @@ public class JiraApiService extends RestClient {
     private static HttpRequestInitializer getHttpRequestInitializer(HttpRequestInitializer httpRequestInitializer) {
 
         return httpRequest -> {
-            httpRequest.setReadTimeout(0);
+            httpRequest.setReadTimeout(60000);
             httpRequest.setThrowExceptionOnExecuteError(false);
             httpRequestInitializer.initialize(httpRequest);
         };

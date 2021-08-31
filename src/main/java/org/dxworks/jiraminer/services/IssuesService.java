@@ -7,10 +7,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.dxworks.jiraminer.JiraApiService;
 import org.dxworks.jiraminer.dto.request.issues.JiraIssuesRequestBody;
-import org.dxworks.jiraminer.dto.response.issues.ChangeLog;
-import org.dxworks.jiraminer.dto.response.issues.Issue;
-import org.dxworks.jiraminer.dto.response.issues.IssueChange;
-import org.dxworks.jiraminer.dto.response.issues.IssueSearchResult;
+import org.dxworks.jiraminer.dto.response.issues.*;
 import org.dxworks.jiraminer.dto.response.issues.worklog.WorkLog;
 import org.dxworks.jiraminer.dto.response.issues.worklog.WorkLogsResponse;
 import org.dxworks.jiraminer.pagination.IssueChangelogUrl;
@@ -18,11 +15,11 @@ import org.dxworks.utils.java.rest.client.response.HttpResponse;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 
@@ -103,37 +100,62 @@ public class IssuesService extends JiraApiService {
     public List<Issue> getAllIssuesForProjects(LocalDate updatedAfter, LocalDate updatedBefore, String... projectKeys) {
         String apiPath = getApiPath("search");
 
-        List<Issue> allIssues = new ArrayList<>();
-
         int startAt = 0;
         int maxResults = 100;
-        int total;
 
         String jqlQuery = createJqlQuery(updatedAfter, updatedBefore, projectKeys);
-        do {
-            IssueSearchResult searchResult = searchIssues(apiPath, jqlQuery, maxResults, startAt);
 
-            allIssues.addAll(searchResult.getIssues());
+        IssueSearchResult searchResult = searchIssues(apiPath, jqlQuery, maxResults, startAt);
 
-            total = searchResult.getTotal();
-            startAt = startAt + maxResults;
-            log.info("Got issues ({}/{})", Math.min(startAt, total), total);
-        } while (startAt < total);
+        int total = searchResult.getTotal();
 
-        allIssues.forEach(issue -> {
-            if (issue.getChangelog().getMaxResults() < issue.getChangelog().getTotal()) {
-                issue.getChangelog().getChanges().addAll(getChangeLogForIssue(issue.getKey(), issue.getChangelog().getMaxResults()));
-            }
-        });
+        AtomicInteger progress = new AtomicInteger(1);
 
-        return allIssues;
+        int times = total / maxResults;
+        Map<Boolean, List<IssueSearchResult>> results = IntStream.range(1, times).parallel()
+                .mapToObj(i -> getIssues(apiPath, maxResults, jqlQuery, progress, times, i * maxResults))
+                .collect(Collectors.groupingBy(result -> result instanceof IssueSearchResultWithErrors));
+
+        List<IssueSearchResult> retries = results.get(Boolean.FALSE).stream()
+                .map(IssueSearchResultWithErrors.class::cast)
+                .map(result -> getIssues(apiPath, maxResults, jqlQuery, progress, times, result.getStartAt())).collect(Collectors.toList());
+
+        return Stream.concat(results.get(Boolean.TRUE).stream(), retries.stream())
+                .map(IssueSearchResult::getIssues)
+                .flatMap(List::stream)
+                .peek(this::addChangeLog)
+                .collect(Collectors.toList());
     }
+
+    private IssueSearchResult getIssues(String apiPath, int maxResults, String jqlQuery, AtomicInteger progress, int times, int startAt) {
+        IssueSearchResult issues = searchIssues(apiPath, jqlQuery, maxResults, startAt);
+        log.info("Completed Step {} / {}", progress.getAndIncrement(), times);
+        return issues;
+    }
+
+    private void addChangeLog(Issue issue) {
+        if (issue.getChangelog().getMaxResults() < issue.getChangelog().getTotal()) {
+            issue.getChangelog().getChanges().addAll(getChangeLogForIssue(issue.getKey(), issue.getChangelog().getMaxResults()));
+        }
+    }
+
 
     @SneakyThrows
     private IssueSearchResult searchIssues(String apiPath, String jqlQuery, int maxResults, int startAt) {
+        JiraIssuesRequestBody jiraIssuesRequestBody = new JiraIssuesRequestBody(jqlQuery, startAt, maxResults, singletonList("changelog"));
         HttpResponse httpResponse = getHttpClient().post(new GenericUrl(apiPath),
-                new JiraIssuesRequestBody(jqlQuery, startAt, maxResults, singletonList("changelog")), null);
-        return parseIfOk(httpResponse, IssueSearchResult.class).orElseGet(IssueSearchResult::new);
+                jiraIssuesRequestBody, null);
+        try {
+            if (!httpResponse.isSuccessStatusCode()) {
+                log.warn("Failed Request: {} {} for {} {}", httpResponse.getStatusCode(), httpResponse.getStatusMessage(), httpResponse.getRequest().getUrl(), jiraIssuesRequestBody);
+                httpResponse.parseAsString();
+                return new IssueSearchResultWithErrors(httpResponse, startAt);
+            }
+            return parseIfOk(httpResponse, IssueSearchResult.class).orElseGet(IssueSearchResult::new);
+        } catch (Exception e) {
+            log.error("Search issues failed", e);
+            return new IssueSearchResultWithErrors();
+        }
     }
 
     private String createJqlQuery(LocalDate updatedAfter, LocalDate updatedBefore, String... existingJiraProjects) {
