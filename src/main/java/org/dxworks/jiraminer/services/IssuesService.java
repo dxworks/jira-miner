@@ -12,6 +12,7 @@ import org.dxworks.jiraminer.dto.response.issues.worklog.WorkLog;
 import org.dxworks.jiraminer.dto.response.issues.worklog.WorkLogsResponse;
 import org.dxworks.jiraminer.pagination.IssueChangelogUrl;
 import org.dxworks.utils.java.rest.client.response.HttpResponse;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
 @Slf4j
@@ -100,36 +102,55 @@ public class IssuesService extends JiraApiService {
     public List<Issue> getAllIssuesForProjects(LocalDate updatedAfter, LocalDate updatedBefore, String... projectKeys) {
         String apiPath = getApiPath("search");
 
-        int startAt = 0;
         int maxResults = 100;
 
         String jqlQuery = createJqlQuery(updatedAfter, updatedBefore, projectKeys);
 
-        IssueSearchResult searchResult = searchIssues(apiPath, jqlQuery, maxResults, startAt);
+        IssueSearchResult searchResult = searchIssues(apiPath, jqlQuery, maxResults, 0);
 
         int total = searchResult.getTotal();
 
         AtomicInteger progress = new AtomicInteger(1);
 
         int times = total / maxResults;
-        Map<Boolean, List<IssueSearchResult>> results = IntStream.range(1, times).parallel()
-                .mapToObj(i -> getIssues(apiPath, maxResults, jqlQuery, progress, times, i * maxResults))
-                .collect(Collectors.groupingBy(result -> result instanceof IssueSearchResultWithErrors));
+        int[] pages = IntStream.range(1, times).map(i -> i * maxResults).toArray();
 
-        List<IssueSearchResult> retries = results.get(Boolean.FALSE).stream()
-                .map(IssueSearchResultWithErrors.class::cast)
-                .map(result -> getIssues(apiPath, maxResults, jqlQuery, progress, times, result.getStartAt())).collect(Collectors.toList());
+        Stream<IssueSearchResult> allResults = getIssueSearchResult(apiPath, maxResults, jqlQuery, progress, times, pages);
 
-        return Stream.concat(results.get(Boolean.TRUE).stream(), retries.stream())
+        return allResults
                 .map(IssueSearchResult::getIssues)
                 .flatMap(List::stream)
                 .peek(this::addChangeLog)
                 .collect(Collectors.toList());
     }
 
+    @SneakyThrows
+    @NotNull
+    private Stream<IssueSearchResult> getIssueSearchResult(String apiPath, int maxResults, String jqlQuery, AtomicInteger progress, int times, int[] pages) {
+        if (pages.length == 0)
+            return Stream.empty();
+
+        Map<Boolean, List<IssueSearchResult>> results = IntStream.of(pages).parallel()
+                .mapToObj(startAt -> getIssues(apiPath, maxResults, jqlQuery, progress, times, startAt))
+                .collect(Collectors.groupingBy(result -> result instanceof IssueSearchResultWithErrors));
+
+        int[] pagesWithErrors = results.getOrDefault((Boolean.TRUE), emptyList()).stream()
+                .map(IssueSearchResultWithErrors.class::cast)
+                .filter(response -> response.getHttpResponse().getStatusCode() == 429)
+                .mapToInt(IssueSearchResultWithErrors::getStartAt).toArray();
+
+        if (pagesWithErrors.length != 0) {
+            log.warn("Waiting for 5s to request another {} pages", pagesWithErrors.length);
+            Thread.sleep(5000);
+        }
+
+        return Stream.concat(results.getOrDefault(Boolean.FALSE, emptyList()).stream(), getIssueSearchResult(apiPath, maxResults, jqlQuery, progress, times, pagesWithErrors));
+    }
+
     private IssueSearchResult getIssues(String apiPath, int maxResults, String jqlQuery, AtomicInteger progress, int times, int startAt) {
         IssueSearchResult issues = searchIssues(apiPath, jqlQuery, maxResults, startAt);
-        log.info("Completed Step {} / {}", progress.getAndIncrement(), times);
+        if (!(issues instanceof IssueSearchResultWithErrors))
+            log.info("Completed Step {} / {}", progress.getAndIncrement(), times);
         return issues;
     }
 
