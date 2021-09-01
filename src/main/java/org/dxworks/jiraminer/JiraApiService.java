@@ -58,6 +58,7 @@ public class JiraApiService extends RestClient {
             return Optional.of(httpResponse.parseAs(clazz));
         } else {
             log.warn("Failed Request: {} {} for {}", httpResponse.getStatusCode(), httpResponse.getStatusMessage(), httpResponse.getRequest().getUrl());
+            httpResponse.parseAsString();
             return Optional.empty();
         }
     }

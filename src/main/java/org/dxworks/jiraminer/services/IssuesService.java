@@ -48,8 +48,8 @@ public class IssuesService extends JiraApiService {
 
         List<IssueChange> allChanges = new ArrayList<>();
         int maxResults = 100;
-        int total;
 
+        int total;
         do {
             HttpResponse httpResponse = getHttpClient().get(new IssueChangelogUrl(apiPath, startAt, maxResults), null);
             Optional<Issue> issue = parseIfOk(httpResponse, Issue.class);
@@ -159,7 +159,6 @@ public class IssuesService extends JiraApiService {
             issue.getChangelog().getChanges().addAll(getChangeLogForIssue(issue.getKey(), issue.getChangelog().getMaxResults()));
         }
     }
-
 
     @SneakyThrows
     private IssueSearchResult searchIssues(String apiPath, String jqlQuery, int maxResults, int startAt) {

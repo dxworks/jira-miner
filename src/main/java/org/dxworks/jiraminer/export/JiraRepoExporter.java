@@ -40,7 +40,7 @@ public class JiraRepoExporter {
         StatusesService statusesService = new StatusesService(jiraHome, authenticator);
 
         List<Issue> issues = issuesService.getAllIssuesForProjects(projectId);
-        issues.forEach(commentsService::addCommentsToIssue);
+        commentsService.addCommentsToIssues(issues);
         List<IssueField> issueFields = issueFieldsService.getFields();
         List<IssueStatus> allStatuses = statusesService.getAllStatuses();
 
