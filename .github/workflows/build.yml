@@ -1,7 +1,7 @@
 name: Build
 
 # Run mvn clean install on pull requests
-on:  pull_request
+on: [push, pull_request]
 
 
 jobs:
