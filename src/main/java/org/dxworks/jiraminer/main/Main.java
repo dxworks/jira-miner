@@ -51,16 +51,7 @@ public class Main {
 		try {
 			issuesAndStatuses = getIssuesAndStatusesCaching(jiraMinerConfiguration);
 		} catch (Exception e) {
-			if (e instanceof HttpResponseException) {
-				HttpResponseException exception = (HttpResponseException) e;
-				int statusCode = exception.getStatusCode();
-				if (statusCode == 401 || statusCode == 404) {
-					log.error("Error retrieving issues. Please revise your authentication method and try again. \n"
-							+ "If you are using cookie based authentication, please renew the cookie!", e);
-					System.exit(1);
-				}
-			}
-			log.error("Error getting issues", e);
+            log.error("Error getting issues", e);
 		}
 
 		log.info("Writing results to file...");
@@ -102,7 +93,7 @@ public class Main {
 										 CommentsService commentsService,
 										 LocalDate updatedAfter) {
 		List<Issue> newIssues = issuesService.getAllIssuesForProjects(updatedAfter, null, jiraMinerConfiguration.getProjects());
-		newIssues.forEach(commentsService::addCommentsToIssue);
+		commentsService.addCommentsToIssues(newIssues);
 		return newIssues;
 	}
 

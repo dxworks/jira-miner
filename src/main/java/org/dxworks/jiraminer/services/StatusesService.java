@@ -10,22 +10,20 @@ import org.dxworks.utils.java.rest.client.response.HttpResponse;
 
 import java.util.List;
 
-import static java.util.Arrays.asList;
-
 @Slf4j
 public class StatusesService extends JiraApiService {
-	public StatusesService(String jiraHome) {
-		super(jiraHome);
-	}
+    public StatusesService(String jiraHome) {
+        super(jiraHome);
+    }
 
-	public StatusesService(String jiraHome, HttpRequestInitializer httpRequestInitializer) {
-		super(jiraHome, httpRequestInitializer);
-	}
+    public StatusesService(String jiraHome, HttpRequestInitializer httpRequestInitializer) {
+        super(jiraHome, httpRequestInitializer);
+    }
 
-	@SneakyThrows
-	public List<IssueStatus> getAllStatuses() {
-		log.info("Getting statuses.");
-		HttpResponse response = getHttpClient().get(new GenericUrl(getApiPath("status")), null);
-		return asList(response.parseAs(IssueStatus[].class));
-	}
+    @SneakyThrows
+    public List<IssueStatus> getAllStatuses() {
+        log.info("Getting statuses.");
+        HttpResponse response = getHttpClient().get(new GenericUrl(getApiPath("status")), null);
+        return parseListIfOk(response, IssueStatus[].class);
+    }
 }

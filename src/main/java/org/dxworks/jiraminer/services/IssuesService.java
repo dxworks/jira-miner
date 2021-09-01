@@ -7,22 +7,22 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.dxworks.jiraminer.JiraApiService;
 import org.dxworks.jiraminer.dto.request.issues.JiraIssuesRequestBody;
-import org.dxworks.jiraminer.dto.response.issues.Issue;
-import org.dxworks.jiraminer.dto.response.issues.IssueChange;
-import org.dxworks.jiraminer.dto.response.issues.IssueSearchResult;
+import org.dxworks.jiraminer.dto.response.issues.*;
 import org.dxworks.jiraminer.dto.response.issues.worklog.WorkLog;
 import org.dxworks.jiraminer.dto.response.issues.worklog.WorkLogsResponse;
 import org.dxworks.jiraminer.pagination.IssueChangelogUrl;
 import org.dxworks.utils.java.rest.client.response.HttpResponse;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
 @Slf4j
@@ -48,14 +48,14 @@ public class IssuesService extends JiraApiService {
 
         List<IssueChange> allChanges = new ArrayList<>();
         int maxResults = 100;
-        int total;
 
+        int total;
         do {
             HttpResponse httpResponse = getHttpClient().get(new IssueChangelogUrl(apiPath, startAt, maxResults), null);
-            Issue issue = httpResponse.parseAs(Issue.class);
-            allChanges.addAll(issue.getChangelog().getChanges());
+            Optional<Issue> issue = parseIfOk(httpResponse, Issue.class);
+            issue.map(Issue::getChangelog).map(ChangeLog::getChanges).ifPresent(allChanges::addAll);
 
-            total = issue.getChangelog().getTotal();
+            total = issue.map(Issue::getChangelog).map(ChangeLog::getTotal).orElse(0);
             startAt = startAt + maxResults;
             log.info("Got changes for issue {} ({}/{})", issueKey, Math.min(startAt, total), total);
         } while (startAt < total);
@@ -76,10 +76,10 @@ public class IssuesService extends JiraApiService {
 
         do {
             HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
-            WorkLogsResponse workLogsResponse = httpResponse.parseAs(WorkLogsResponse.class);
-            allWorkLogs.addAll(workLogsResponse.getWorklogs());
+            Optional<WorkLogsResponse> workLogsResponse = parseIfOk(httpResponse, WorkLogsResponse.class);
+            workLogsResponse.map(WorkLogsResponse::getWorklogs).ifPresent(allWorkLogs::addAll);
 
-            total = workLogsResponse.getTotal();
+            total = workLogsResponse.map(WorkLogsResponse::getTotal).orElse(0);
             startAt = startAt + maxResults;
             log.info("Got work logs for issue {} ({}/{})", issueKey, Math.min(startAt, total), total);
         } while (startAt < total);
@@ -102,37 +102,80 @@ public class IssuesService extends JiraApiService {
     public List<Issue> getAllIssuesForProjects(LocalDate updatedAfter, LocalDate updatedBefore, String... projectKeys) {
         String apiPath = getApiPath("search");
 
-        List<Issue> allIssues = new ArrayList<>();
-
-        int startAt = 0;
         int maxResults = 100;
-        int total;
 
         String jqlQuery = createJqlQuery(updatedAfter, updatedBefore, projectKeys);
-        do {
-            IssueSearchResult searchResult = searchIssues(apiPath, jqlQuery, maxResults, startAt);
 
-            allIssues.addAll(searchResult.getIssues());
+        IssueSearchResult searchResult = searchIssues(apiPath, jqlQuery, maxResults, 0);
 
-            total = searchResult.getTotal();
-            startAt = startAt + maxResults;
-            log.info("Got issues ({}/{})", Math.min(startAt, total), total);
-        } while (startAt < total);
+        int total = searchResult.getTotal();
 
-        allIssues.forEach(issue -> {
-            if (issue.getChangelog().getMaxResults() < issue.getChangelog().getTotal()) {
-                issue.getChangelog().getChanges().addAll(getChangeLogForIssue(issue.getKey(), issue.getChangelog().getMaxResults()));
-            }
-        });
+        AtomicInteger progress = new AtomicInteger(1);
 
-        return allIssues;
+        int times = total / maxResults;
+        int[] pages = IntStream.range(1, times).map(i -> i * maxResults).toArray();
+
+        Stream<IssueSearchResult> allResults = getIssueSearchResult(apiPath, maxResults, jqlQuery, progress, times, pages);
+
+        return allResults
+                .map(IssueSearchResult::getIssues)
+                .flatMap(List::stream)
+                .peek(this::addChangeLog)
+                .collect(Collectors.toList());
+    }
+
+    @SneakyThrows
+    @NotNull
+    private Stream<IssueSearchResult> getIssueSearchResult(String apiPath, int maxResults, String jqlQuery, AtomicInteger progress, int times, int[] pages) {
+        if (pages.length == 0)
+            return Stream.empty();
+
+        Map<Boolean, List<IssueSearchResult>> results = IntStream.of(pages).parallel()
+                .mapToObj(startAt -> getIssues(apiPath, maxResults, jqlQuery, progress, times, startAt))
+                .collect(Collectors.groupingBy(result -> result instanceof IssueSearchResultWithErrors));
+
+        int[] pagesWithErrors = results.getOrDefault((Boolean.TRUE), emptyList()).stream()
+                .map(IssueSearchResultWithErrors.class::cast)
+                .filter(response -> response.getHttpResponse().getStatusCode() == 429)
+                .mapToInt(IssueSearchResultWithErrors::getStartAt).toArray();
+
+        if (pagesWithErrors.length != 0) {
+            log.warn("Waiting for 5s to request another {} pages", pagesWithErrors.length);
+            Thread.sleep(5000);
+        }
+
+        return Stream.concat(results.getOrDefault(Boolean.FALSE, emptyList()).stream(), getIssueSearchResult(apiPath, maxResults, jqlQuery, progress, times, pagesWithErrors));
+    }
+
+    private IssueSearchResult getIssues(String apiPath, int maxResults, String jqlQuery, AtomicInteger progress, int times, int startAt) {
+        IssueSearchResult issues = searchIssues(apiPath, jqlQuery, maxResults, startAt);
+        if (!(issues instanceof IssueSearchResultWithErrors))
+            log.info("Completed Step {} / {}", progress.getAndIncrement(), times);
+        return issues;
+    }
+
+    private void addChangeLog(Issue issue) {
+        if (issue.getChangelog().getMaxResults() < issue.getChangelog().getTotal()) {
+            issue.getChangelog().getChanges().addAll(getChangeLogForIssue(issue.getKey(), issue.getChangelog().getMaxResults()));
+        }
     }
 
     @SneakyThrows
     private IssueSearchResult searchIssues(String apiPath, String jqlQuery, int maxResults, int startAt) {
+        JiraIssuesRequestBody jiraIssuesRequestBody = new JiraIssuesRequestBody(jqlQuery, startAt, maxResults, singletonList("changelog"));
         HttpResponse httpResponse = getHttpClient().post(new GenericUrl(apiPath),
-                new JiraIssuesRequestBody(jqlQuery, startAt, maxResults, singletonList("changelog")), null);
-        return httpResponse.parseAs(IssueSearchResult.class);
+                jiraIssuesRequestBody, null);
+        try {
+            if (!httpResponse.isSuccessStatusCode()) {
+                log.warn("Failed Request: {} {} for {} {}", httpResponse.getStatusCode(), httpResponse.getStatusMessage(), httpResponse.getRequest().getUrl(), jiraIssuesRequestBody);
+                httpResponse.parseAsString();
+                return new IssueSearchResultWithErrors(httpResponse, startAt);
+            }
+            return parseIfOk(httpResponse, IssueSearchResult.class).orElseGet(IssueSearchResult::new);
+        } catch (Exception e) {
+            log.error("Search issues failed", e);
+            return new IssueSearchResultWithErrors();
+        }
     }
 
     private String createJqlQuery(LocalDate updatedAfter, LocalDate updatedBefore, String... existingJiraProjects) {

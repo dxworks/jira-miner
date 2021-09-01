@@ -7,9 +7,9 @@ import org.dxworks.jiraminer.JiraApiService;
 import org.dxworks.jiraminer.dto.response.issues.IssueField;
 import org.dxworks.utils.java.rest.client.response.HttpResponse;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-
-import static java.util.Arrays.asList;
 
 public class IssueFieldsService extends JiraApiService {
 
@@ -27,6 +27,6 @@ public class IssueFieldsService extends JiraApiService {
 
         HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
 
-        return asList(httpResponse.parseAs(IssueField[].class));
+        return parseListIfOk(httpResponse, IssueField[].class);
     }
 }

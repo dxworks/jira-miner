@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.dxworks.jiraminer.pagination.Paginated;
 
+import java.util.Collections;
 import java.util.List;
 
 @Data
@@ -13,5 +14,5 @@ import java.util.List;
 @AllArgsConstructor
 public class IssueSearchResult extends Paginated {
     @Key
-    private List<Issue> issues;
+    private List<Issue> issues = Collections.emptyList();
 }

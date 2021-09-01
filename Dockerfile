@@ -1,4 +1,4 @@
-FROM openjdk:8
+FROM adoptopenjdk:11
 
 
 RUN mkdir /opt/jiraminer

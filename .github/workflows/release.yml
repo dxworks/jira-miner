@@ -1,0 +1,56 @@
+on:
+  push:
+    tags:
+      - 'v*'
+
+name: Create Release
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Build
+        run: mvn package
+
+      - name: Prepare Assets
+        run: |
+          mkdir jiraminer
+          mkdir jiraminer/config
+
+          touch ${{ github.workspace }}/releaseNotes/v${{ steps.semver_parser.outputs.semver }}.md
+          cp ${{ github.workspace }}/releaseNotes/v${{ steps.semver_parser.outputs.semver }}.md jiraminer/CHANGELOG.md
+          cp README.md jiraminer/README.md
+          cp docs/jiraminer-config-template.properties jiraminer/config/jiraminer-config.properties
+
+          cp bin/jiraminer.sh jiraminer/jiraminer.sh
+          chmod +x jiraminer/jiraminer.sh
+          cp bin/jiraminer.bat jiraminer/jiraminer.bat
+          cp target/jiraminer.jar jiraminer/jiraminer.jar
+
+      - name: Extract Semver
+        id: semver_parser
+        run: |
+          semver=${TAG#"refs/tags/v"}
+          semver=${semver%"-voyager"}
+          echo ::set-output name=semver::$semver
+        env:
+          TAG: ${{ github.ref }}
+
+      - name: Create Archive
+        run: zip -r jiraminer.zip jiraminer
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: JiraMiner ${{ steps.semver_parser.outputs.semver }}
+          body_path: ${{ github.workspace }}/releaseNotes/v${{ steps.semver_parser.outputs.semver }}.md
+          body: ""
+          prerelease: false
+          draft: false
+          fail_on_unmatched_files: true
+          files: jiraminer.zip

@@ -28,7 +28,7 @@ class ResultExporterIT {
     @Test
     void exportIssues() {
         List<Issue> issues = issuesService.getAllIssuesForProjects("IG");
-        issues.forEach(commentsService::addCommentsToIssue);
+        commentsService.addCommentsToIssues(issues);
         List<IssueField> issueFields = issueFieldsService.getFields();
         List<IssueStatus> allStatuses = statusesService.getAllStatuses();
 

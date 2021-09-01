@@ -11,7 +11,6 @@ import org.dxworks.jiraminer.dto.response.worklogs.UpdatedWorkLogsResponse;
 import org.dxworks.jiraminer.dto.response.worklogs.WorklogValue;
 import org.dxworks.utils.java.rest.client.response.HttpResponse;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,17 +35,19 @@ public class WorklogService extends JiraApiService {
         String apiPath = getApiPath("worklog", "updated");
         HttpResponse httpResponse = getHttpClient().get(new UpdatedWorkLogsUrl(apiPath, since), null);
 
-        return httpResponse.parseAs(UpdatedWorkLogsResponse.class)
-                .getValues().stream()
+        return parseIfOk(httpResponse, UpdatedWorkLogsResponse.class)
+                .map(UpdatedWorkLogsResponse::getValues)
+                .stream().flatMap(List::stream)
                 .map(WorklogValue::getWorklogId)
                 .collect(Collectors.toList());
+
     }
 
     public List<WorkLog> listWorkLogsForIds(List<Long> ids) {
         String apiPath = getApiPath("worklog", "list");
         HttpResponse httpResponse = getHttpClient().post(new GenericUrl(apiPath), new ListWorkLogsRequest(ids), null);
 
-        return Arrays.asList(httpResponse.parseAs(WorkLog[].class));
+        return parseListIfOk(httpResponse, WorkLog[].class);
     }
 
 }
