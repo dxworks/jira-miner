@@ -117,7 +117,7 @@ public class IssuesService extends JiraApiService {
 
         Stream<IssueSearchResult> allResults = getIssueSearchResult(apiPath, maxResults, jqlQuery, progress, times, pages);
 
-        return allResults
+        return Stream.concat(Stream.of(searchResult), allResults)
                 .map(IssueSearchResult::getIssues)
                 .flatMap(List::stream)
                 .peek(this::addChangeLog)

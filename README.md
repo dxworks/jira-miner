@@ -26,7 +26,7 @@ The url to the jira instance you want to extract the issues from. Examples: `htt
 #### projects
 A list of comma separated strings representing the JIRA project IDs you want to extract issues from. For example if we would have 3 projects in our JIRA instance with the IDs: PRO, NUL and SAN and we sould only want the issues from NUL and SAN, we would populate the projects field as follows: 
 `projects=NUL,SAM`
-
+__
 #### exportTypes
 A list of comma separated types for export. Available types are `basic` and `detailed`, basic by default (if property is ommited). 
 
