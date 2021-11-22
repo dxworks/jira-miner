@@ -64,25 +64,15 @@ public class IssuesService extends JiraApiService {
     }
 
     public List<WorkLog> getWorkLogsForIssue(String issueKey) {
-        return getWorkLogsForIssue(issueKey, 0);
-    }
-
-    public List<WorkLog> getWorkLogsForIssue(String issueKey, int startAt) {
         String apiPath = getApiPath(ImmutableMap.of("issueId", issueKey), "issue", ":issueId", "worklog");
 
         List<WorkLog> allWorkLogs = new ArrayList<>();
-        int maxResults = 100;
-        int total;
 
-        do {
-            HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
-            Optional<WorkLogsResponse> workLogsResponse = parseIfOk(httpResponse, WorkLogsResponse.class);
-            workLogsResponse.map(WorkLogsResponse::getWorklogs).ifPresent(allWorkLogs::addAll);
+        HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
+        Optional<WorkLogsResponse> workLogsResponse = parseIfOk(httpResponse, WorkLogsResponse.class);
+        workLogsResponse.map(WorkLogsResponse::getWorklogs).ifPresent(allWorkLogs::addAll);
 
-            total = workLogsResponse.map(WorkLogsResponse::getTotal).orElse(0);
-            startAt = startAt + maxResults;
-            log.info("Got work logs for issue {} ({}/{})", issueKey, Math.min(startAt, total), total);
-        } while (startAt < total);
+        log.info("Got {} work logs for issue {}", allWorkLogs.size(), issueKey);
 
         return allWorkLogs;
     }
