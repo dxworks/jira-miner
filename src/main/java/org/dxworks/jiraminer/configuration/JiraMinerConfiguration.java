@@ -8,12 +8,21 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 import static org.dxworks.jiraminer.configuration.JiraMinerConfigValidation.notNull;
-import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.*;
+import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.CONFIG_FOLDER;
+import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.EXPORT_TYPES;
+import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.JIRA_AUTHENTICATION_FIELD;
+import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.JIRA_HOME;
+import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.JIRA_MINER_CONFIG_FILE;
+import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.JIRA_PROJECTS_FIELD;
+import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.PROJECT_ID;
 
 @Data
 @Slf4j
@@ -24,6 +33,8 @@ public class JiraMinerConfiguration {
     private String jiraHome;
     private List<String> projects;
     private AuthenticationType authenticationType;
+    private List<ExportType> exportTypes;
+    private boolean useCache;
 
     private Properties configurationProperties;
 
@@ -54,6 +65,17 @@ public class JiraMinerConfiguration {
         authenticationType = jiraAuthentication != null ?
                 AuthenticationType.valueOf(jiraAuthentication.toUpperCase()) :
                 AuthenticationType.NONE;
+
+        exportTypes = Arrays.stream(getOrDefault(EXPORT_TYPES, "").split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(String::toUpperCase)
+                .filter(it -> Arrays.stream(ExportType.values()).anyMatch(exportType -> exportType.name().equals(it)))
+                .map(ExportType::valueOf)
+                .collect(Collectors.toList());
+
+        useCache = Boolean.parseBoolean(getOrDefault("useCache", "true"));
+
         log.info("Configuration read successfully.");
     }
 
@@ -70,7 +92,7 @@ public class JiraMinerConfiguration {
     }
 
     public void saveProperties() {
-        try (OutputStream outputStream = new FileOutputStream(CONFIG_FOLDER + "/" + JIRA_MINER_CONFIG_FILE)) {
+        try (OutputStream outputStream = Files.newOutputStream(Paths.get(CONFIG_FOLDER + "/" + JIRA_MINER_CONFIG_FILE))) {
             configurationProperties.store(outputStream, null);
         } catch (Exception e) {
             log.error("Could not save properties!", e);
@@ -81,7 +103,15 @@ public class JiraMinerConfiguration {
         return configurationProperties.getProperty(key);
     }
 
-    public String getOrDefault(String key, Object defaultValue) {
+    public String getOrDefault(String key, String defaultValue) {
         return (String) configurationProperties.getOrDefault(key, defaultValue);
+    }
+
+    public boolean useCache() {
+        return useCache;
+    }
+
+    public boolean needsDetailedExport() {
+        return exportTypes.contains(ExportType.DETAILED);
     }
 }

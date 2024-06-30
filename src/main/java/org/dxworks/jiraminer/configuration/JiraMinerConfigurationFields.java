@@ -16,4 +16,6 @@ public interface JiraMinerConfigurationFields {
 
     String PROJECT_ID = "projectID";
     String JIRA_HOME = "jira_home";
+    String EXPORT_TYPES = "exportTypes";
+    String USE_CACHE = "useCache";
 }

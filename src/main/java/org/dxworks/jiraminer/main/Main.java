@@ -32,8 +32,6 @@ import static org.dxworks.jiraminer.cache.CacheRepository.merge;
 @Slf4j
 public class Main {
 
-	public static final String BASIC = "basic";
-	public static final String DETAILED = "detailed";
 	private static JiraMinerConfigurer jiraMinerConfigurer;
 	private static final String afterPrefix = "-after=";
 	private static final String beforePrefix = "-before=";
@@ -56,13 +54,10 @@ public class Main {
 
 		log.info("Writing results to file...");
 		ensureResultsFolderExists();
-		List<String> exportTypes = Optional.ofNullable(jiraMinerConfiguration.getProperty("exportTypes"))
-				.map(types -> asList(types.split(","))).orElse(singletonList(BASIC));
 		String projectID = jiraMinerConfiguration.getProjectId();
-		if (exportTypes.contains(BASIC)) {
 			writeBasicIssuesToFile(projectID, issuesAndStatuses.left);
-		}
-		if (exportTypes.contains(DETAILED)) {
+
+		if (jiraMinerConfiguration.needsDetailedExport()) {
 			new ResultExporter().export(issuesAndStatuses.left, issuesAndStatuses.right, getOutputFIle(projectID + "-detailed"));
 		}
 		log.info("Finished Jira Miner.");
@@ -74,9 +69,9 @@ public class Main {
 		StatusesService statusesService = jiraMinerConfigurer.configureStatusesService();
 		String projectId = jiraMinerConfiguration.getProjectId();
 
-		CacheDTO cacheDTO = cacheRepository.read(projectId);
+		CacheDTO cacheDTO;
 		List<Issue> issues;
-		if (cacheDTO != null) {
+		if (jiraMinerConfiguration.useCache() && (cacheDTO = cacheRepository.read(projectId)) != null) {
 			List<Issue> newIssues = getIssues(jiraMinerConfiguration, issuesService, commentsService, LocalDateFormatter.parse(cacheDTO.getAt()));
 			issues = merge(cacheDTO.getIssues(), newIssues);
 		} else {
@@ -84,7 +79,9 @@ public class Main {
 		}
 		List<IssueStatus> allStatuses = statusesService.getAllStatuses();
 
-		cacheRepository.cache(projectId, issues, allStatuses, Main.now);
+		if(jiraMinerConfiguration.useCache())
+			cacheRepository.cache(projectId, issues, allStatuses, Main.now);
+
 		return new ImmutablePair<>(issues, allStatuses);
 	}
 
@@ -93,7 +90,10 @@ public class Main {
 										 CommentsService commentsService,
 										 LocalDate updatedAfter) {
 		List<Issue> newIssues = issuesService.getAllIssuesForProjects(updatedAfter, null, jiraMinerConfiguration.getProjects());
-		commentsService.addCommentsToIssues(newIssues);
+		if(jiraMinerConfiguration.needsDetailedExport()) {
+			newIssues.forEach(issuesService::addChangeLog);
+			commentsService.addCommentsToIssues(newIssues);
+		}
 		return newIssues;
 	}
 

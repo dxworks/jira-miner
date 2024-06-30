@@ -110,7 +110,6 @@ public class IssuesService extends JiraApiService {
         return Stream.concat(Stream.of(searchResult), allResults)
                 .map(IssueSearchResult::getIssues)
                 .flatMap(List::stream)
-                .peek(this::addChangeLog)
                 .collect(Collectors.toList());
     }
 
@@ -144,7 +143,7 @@ public class IssuesService extends JiraApiService {
         return issues;
     }
 
-    private void addChangeLog(Issue issue) {
+    public void addChangeLog(Issue issue) {
         if (issue.getChangelog().getMaxResults() < issue.getChangelog().getTotal()) {
             issue.getChangelog().getChanges().addAll(getChangeLogForIssue(issue.getKey(), issue.getChangelog().getMaxResults()));
         }

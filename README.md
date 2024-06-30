@@ -6,13 +6,14 @@ Visit us on [Github](https://github.com/dxworks/jira-miner).
 ## Configuration
 To run the application you first need to create a file called `config/jiraminer-config.properties` in the `config` folder next to the runnable files.
 An example configuration file for a local environment could be:
-```$xslt
+```properties
 projectID=yourProjectID
 jira_home=http://localhost:6060
 projects=COM
 exportTypes=detailed,basic
 authentication=cookie
 cookie=JSESSIONID=E96741F7E5C783D3FCC7E82E3874D51B; atlassian.xsrf.token=BBPK-PX8B-NPTB-5W5S_babd22b7c0c76f69c628902b0a08daf1e9bdb609_lin
+useCache=true
 ```
 
 The file has the following fields:
@@ -28,7 +29,10 @@ A list of comma separated strings representing the JIRA project IDs you want to 
 `projects=NUL,SAM`
 __
 #### exportTypes
-A list of comma separated types for export. Available types are `basic` and `detailed`, basic by default (if property is ommited). 
+A list of comma separated types for export. Available types are `basic` and `detailed`, basic by default (if property is omitted). Details like changelog and comments are only retrieved and cached if `detailed` is present.
+
+#### useCache
+Whether to use the cache or not. If set to true, the app will not request the issues updated after the cache date. If set to false, the app will request all issues from the JIRA server. Default is true.
 
 #### authentication
 There are 4 possible values for this field:
@@ -36,7 +40,7 @@ There are 4 possible values for this field:
 ##### basic
 This field value requires two additional fields to be added to the configuration file: `username` and `password`, representing the username and the password of an authorized user who can access the JIRA REST API.
 Example usage: 
-```$xslt
+```properties
 ...
 authentication=basic
 username=john.doe@my-company.com
@@ -49,15 +53,11 @@ This field value requires one additional field to be added to the configuration 
 To get this Cookie value, please open a browser, login to your JIRA Server instance and access the following link `<jira_home>/rest/api/2/serverInfo`
 
 The server response should be a JSON that looks similar to this one:
-```$xslt
+```json lines
 {
     baseUrl: "<jira_home>",
     version: "8.3.4",
-    versionNumbers: [
-        8,
-        3,
-        4
-    ],
+    versionNumbers: [ 8, 3, 4 ],
     deploymentType: "Server",
     buildDate: "2019-09-13T00:00:00.000+0300",
     databaseBuildNumber: 803005,
@@ -140,7 +140,7 @@ Before using the app, make sure you can access the JIRA REST API. go to your Jir
 `<your_jira_home>/rest/api/2/serverInfo`.
 
 The server response should be a JSON that looks similar to this one:
-```$xslt
+```json lines
 {
     baseUrl: "<jira_home>",
     version: "8.3.4",
