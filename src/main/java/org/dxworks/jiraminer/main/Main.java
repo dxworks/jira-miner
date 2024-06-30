@@ -1,6 +1,5 @@
 package org.dxworks.jiraminer.main;
 
-import com.google.api.client.http.HttpResponseException;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -25,8 +24,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
 import static org.dxworks.jiraminer.cache.CacheRepository.merge;
 
 @Slf4j
