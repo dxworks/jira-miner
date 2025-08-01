@@ -96,7 +96,16 @@ The application extracts the following fields from all JIRA Issues for the desir
     parentKey: String
     status: String
     startDate: String
-    endDate: String
+    updatedDate: String
+    resolutionDate: String
+    dueDate: String
+    resolution: String
+    environment: String
+    labels: List<String>
+    fixVersions: List<String>
+    affectsVersions: List<String>
+    issueLinks: List<Map<String, String>> // Contains type, key, direction, and description
+    workRatio: Double
     summary: String
     description: String
     components: List<String>
