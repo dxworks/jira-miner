@@ -20,8 +20,7 @@ import org.dxworks.utils.java.rest.client.utils.JsonMapper;
 import java.io.File;
 import java.io.FileWriter;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.dxworks.jiraminer.cache.CacheRepository.merge;
@@ -116,8 +115,79 @@ public class Main {
 						.description(issue.getDescription()).status(issue.getStatus().getName())
 						.issueType(issue.getIssuetype().getName()).parentKey(getParentOrNull(issue)).components(
 								issue.getComponents().stream().map(JiraComponent::getName).collect(Collectors.toList()))
-						.startDate(issue.getCreated()).endDate(issue.getUpdated()).build())
+						.startDate(issue.getCreated()).updatedDate(issue.getUpdated())
+						.resolutionDate(issue.getResolutiondate())
+						.dueDate(issue.getFields().getDuedate())
+						.environment(issue.getFields().getEnvironment())
+						.resolution(issue.getFields().getResolution() != null && issue.getFields().getResolution().get("name") != null ? 
+							issue.getFields().getResolution().get("name").toString() : null)
+						.labels(issue.getFields().getLabels())
+						.fixVersions(extractVersionNames(issue.getFields().getFixVersions()))
+						.affectsVersions(extractVersionNames(issue.getFields().getVersions()))
+						.workRatio(issue.getFields().getWorkratio())
+						.issueLinks(extractIssueLinks(issue.getFields().getIssuelinks()))
+						.build())
 				.collect(Collectors.toList());
+	}
+	
+	private static List<Map<String, String>> extractIssueLinks(List<Map<String, Object>> issueLinks) {
+		if (issueLinks == null) {
+			return null;
+		}
+		return issueLinks.stream()
+			.filter(Objects::nonNull)
+			.map(link -> {
+				Map<String, String> linkInfo = new HashMap<>();
+				
+				Object issueLinkType = link.get("type");
+				if (issueLinkType instanceof Map) {
+					Map<?, ?> linkType = (Map<?, ?>)issueLinkType;
+					Object name = linkType.get("name");
+					Object inward = linkType.get("inward");
+					Object outward = linkType.get("outward");
+					
+					if (name != null) {
+						linkInfo.put("type", name.toString());
+					}
+					
+					extractLinkedIssueInfo(link, linkInfo, "outwardIssue", "outward", outward);
+					
+					if (!linkInfo.containsKey("key")) {
+						extractLinkedIssueInfo(link, linkInfo, "inwardIssue", "inward", inward);
+					}
+				}
+				
+				return linkInfo.isEmpty() ? null : linkInfo;
+			})
+			.filter(Objects::nonNull)
+			.collect(Collectors.toList());
+	}
+	
+	private static void extractLinkedIssueInfo(Map<String, Object> link, Map<String, String> linkInfo, 
+			String issueType, String directionType, Object directionDescription) {
+		Object issue = link.get(issueType);
+		if (issue instanceof Map) {
+			Object key = ((Map<?, ?>)issue).get("key");
+			if (key != null) {
+				linkInfo.put("key", key.toString());
+				linkInfo.put("direction", directionType);
+				if (directionDescription != null) {
+					linkInfo.put("description", directionDescription.toString());
+				}
+			}
+		}
+	}
+	
+	private static List<String> extractVersionNames(List<Map<String, Object>> versions) {
+		if (versions == null) {
+			return null;
+		}
+		return versions.stream()
+			.filter(Objects::nonNull)
+			.map(v -> v.get("name"))
+			.filter(Objects::nonNull)
+			.map(Object::toString)
+			.collect(Collectors.toList());
 	}
 
 	private static String getParentOrNull(Issue issue) {

@@ -8,6 +8,7 @@ import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
 import org.dxworks.jiraminer.dto.response.users.User;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -29,6 +30,8 @@ public class IssueFields extends GenericJson {
     @Key
     private String updated;
     @Key
+    private String resolutiondate;
+    @Key
     private List<Issue> subtasks;
     @Key
     private IssuePriority priority;
@@ -42,4 +45,20 @@ public class IssueFields extends GenericJson {
     private Long timeestimate;
     @Key
     private Long timespent;
+    @Key
+    private List<String> labels;
+    @Key
+    private List<Map<String, Object>> fixVersions;
+    @Key
+    private List<Map<String, Object>> versions;
+    @Key
+    private String duedate;
+    @Key
+    private Map<String, Object> resolution;
+    @Key
+    private String environment;
+    @Key
+    private List<Map<String, Object>> issuelinks;
+    @Key
+    private Double workratio;
 }
