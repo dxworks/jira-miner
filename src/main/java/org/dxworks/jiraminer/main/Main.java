@@ -10,6 +10,7 @@ import org.dxworks.jiraminer.configuration.JiraMinerConfiguration;
 import org.dxworks.jiraminer.configuration.JiraMinerConfigurer;
 import org.dxworks.jiraminer.dto.response.issues.Issue;
 import org.dxworks.jiraminer.dto.response.issues.JiraComponent;
+import org.dxworks.jiraminer.dto.response.issues.Version;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
 import org.dxworks.jiraminer.export.ResultExporter;
 import org.dxworks.jiraminer.services.CommentsService;
@@ -119,8 +120,8 @@ public class Main {
 						.resolutionDate(issue.getResolutiondate())
 						.dueDate(issue.getFields().getDuedate())
 						.environment(issue.getFields().getEnvironment())
-						.resolution(issue.getFields().getResolution() != null && issue.getFields().getResolution().get("name") != null ? 
-							issue.getFields().getResolution().get("name").toString() : null)
+						.resolution(issue.getFields().getResolution() != null ? 
+							issue.getFields().getResolution().getName() : null)
 						.labels(issue.getFields().getLabels())
 						.fixVersions(extractVersionNames(issue.getFields().getFixVersions()))
 						.affectsVersions(extractVersionNames(issue.getFields().getVersions()))
@@ -178,15 +179,14 @@ public class Main {
 		}
 	}
 	
-	private static List<String> extractVersionNames(List<Map<String, Object>> versions) {
+	private static List<String> extractVersionNames(List<Version> versions) {
 		if (versions == null) {
 			return null;
 		}
 		return versions.stream()
 			.filter(Objects::nonNull)
-			.map(v -> v.get("name"))
+			.map(Version::getName)
 			.filter(Objects::nonNull)
-			.map(Object::toString)
 			.collect(Collectors.toList());
 	}
 

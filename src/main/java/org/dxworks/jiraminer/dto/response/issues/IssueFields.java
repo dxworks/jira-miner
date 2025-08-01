@@ -48,13 +48,13 @@ public class IssueFields extends GenericJson {
     @Key
     private List<String> labels;
     @Key
-    private List<Map<String, Object>> fixVersions;
+    private List<Version> fixVersions;
     @Key
-    private List<Map<String, Object>> versions;
+    private List<Version> versions;
     @Key
     private String duedate;
     @Key
-    private Map<String, Object> resolution;
+    private Resolution resolution;
     @Key
     private String environment;
     @Key
