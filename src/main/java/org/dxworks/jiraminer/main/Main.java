@@ -9,6 +9,7 @@ import org.dxworks.jiraminer.cache.CacheRepository;
 import org.dxworks.jiraminer.configuration.JiraMinerConfiguration;
 import org.dxworks.jiraminer.configuration.JiraMinerConfigurer;
 import org.dxworks.jiraminer.dto.response.issues.Issue;
+import org.dxworks.jiraminer.dto.response.issues.IssueLink;
 import org.dxworks.jiraminer.dto.response.issues.JiraComponent;
 import org.dxworks.jiraminer.dto.response.issues.Version;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
@@ -131,7 +132,7 @@ public class Main {
 				.collect(Collectors.toList());
 	}
 	
-	private static List<Map<String, String>> extractIssueLinks(List<Map<String, Object>> issueLinks) {
+	private static List<Map<String, String>> extractIssueLinks(List<IssueLink> issueLinks) {
 		if (issueLinks == null) {
 			return null;
 		}
@@ -140,21 +141,17 @@ public class Main {
 			.map(link -> {
 				Map<String, String> linkInfo = new HashMap<>();
 				
-				Object issueLinkType = link.get("type");
-				if (issueLinkType instanceof Map) {
-					Map<?, ?> linkType = (Map<?, ?>)issueLinkType;
-					Object name = linkType.get("name");
-					Object inward = linkType.get("inward");
-					Object outward = linkType.get("outward");
+				if (link.getType() != null) {
+					linkInfo.put("type", link.getType().getName());
 					
-					if (name != null) {
-						linkInfo.put("type", name.toString());
-					}
-					
-					extractLinkedIssueInfo(link, linkInfo, "outwardIssue", "outward", outward);
-					
-					if (!linkInfo.containsKey("key")) {
-						extractLinkedIssueInfo(link, linkInfo, "inwardIssue", "inward", inward);
+					if (link.getOutwardIssue() != null) {
+						linkInfo.put("key", link.getOutwardIssue().getKey());
+						linkInfo.put("direction", "outward");
+						linkInfo.put("description", link.getType().getOutward());
+					} else if (link.getInwardIssue() != null) {
+						linkInfo.put("key", link.getInwardIssue().getKey());
+						linkInfo.put("direction", "inward");
+						linkInfo.put("description", link.getType().getInward());
 					}
 				}
 				
@@ -162,21 +159,6 @@ public class Main {
 			})
 			.filter(Objects::nonNull)
 			.collect(Collectors.toList());
-	}
-	
-	private static void extractLinkedIssueInfo(Map<String, Object> link, Map<String, String> linkInfo, 
-			String issueType, String directionType, Object directionDescription) {
-		Object issue = link.get(issueType);
-		if (issue instanceof Map) {
-			Object key = ((Map<?, ?>)issue).get("key");
-			if (key != null) {
-				linkInfo.put("key", key.toString());
-				linkInfo.put("direction", directionType);
-				if (directionDescription != null) {
-					linkInfo.put("description", directionDescription.toString());
-				}
-			}
-		}
 	}
 	
 	private static List<String> extractVersionNames(List<Version> versions) {

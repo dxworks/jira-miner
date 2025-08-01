@@ -8,7 +8,6 @@ import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
 import org.dxworks.jiraminer.dto.response.users.User;
 
 import java.util.List;
-import java.util.Map;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -58,7 +57,7 @@ public class IssueFields extends GenericJson {
     @Key
     private String environment;
     @Key
-    private List<Map<String, Object>> issuelinks;
+    private List<IssueLink> issuelinks;
     @Key
     private Double workratio;
 }
