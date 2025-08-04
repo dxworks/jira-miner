@@ -48,4 +48,6 @@ public class BasicJiraMinerOutput {
 	private String summary;
 	@Key
 	private String description;
+	@Key
+	private Map<String, Object> customFields;
 }

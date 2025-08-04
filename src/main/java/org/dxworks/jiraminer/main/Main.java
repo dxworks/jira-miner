@@ -8,13 +8,11 @@ import org.dxworks.jiraminer.cache.CacheDTO;
 import org.dxworks.jiraminer.cache.CacheRepository;
 import org.dxworks.jiraminer.configuration.JiraMinerConfiguration;
 import org.dxworks.jiraminer.configuration.JiraMinerConfigurer;
-import org.dxworks.jiraminer.dto.response.issues.Issue;
-import org.dxworks.jiraminer.dto.response.issues.IssueLink;
-import org.dxworks.jiraminer.dto.response.issues.JiraComponent;
-import org.dxworks.jiraminer.dto.response.issues.Version;
+import org.dxworks.jiraminer.dto.response.issues.*;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
 import org.dxworks.jiraminer.export.ResultExporter;
 import org.dxworks.jiraminer.services.CommentsService;
+import org.dxworks.jiraminer.services.IssueFieldsService;
 import org.dxworks.jiraminer.services.IssuesService;
 import org.dxworks.jiraminer.services.StatusesService;
 import org.dxworks.utils.java.rest.client.utils.JsonMapper;
@@ -35,12 +33,13 @@ public class Main {
 	private static final String beforePrefix = "-before=";
 	private static final CacheRepository cacheRepository = new CacheRepository();
 	private static final LocalDate now = LocalDate.now();
-
+    private static final Map<String, String> fieldNamesById = new HashMap<>();
+	private static boolean fieldNamesLoaded = false;
 
 	public static void main(String[] args) {
 		log.info("Starting Jira Miner...");
 
-		JiraMinerConfiguration jiraMinerConfiguration = JiraMinerConfiguration.getInstance();
+        JiraMinerConfiguration jiraMinerConfiguration = JiraMinerConfiguration.getInstance();
 		jiraMinerConfigurer = new JiraMinerConfigurer(jiraMinerConfiguration);
 		ImmutablePair<List<Issue>, List<IssueStatus>> issuesAndStatuses = null;
 
@@ -62,9 +61,11 @@ public class Main {
 	}
 
 	private static ImmutablePair<List<Issue>, List<IssueStatus>> getIssuesAndStatusesCaching(JiraMinerConfiguration jiraMinerConfiguration) {
-		IssuesService issuesService = jiraMinerConfigurer.configureIssuesService();
-		CommentsService commentsService = jiraMinerConfigurer.configureCommentsService();
-		StatusesService statusesService = jiraMinerConfigurer.configureStatusesService();
+        IssuesService issuesService = jiraMinerConfigurer.configureIssuesService();
+        CommentsService commentsService = jiraMinerConfigurer.configureCommentsService();
+        StatusesService statusesService = jiraMinerConfigurer.configureStatusesService();
+        IssueFieldsService issueFieldsService = jiraMinerConfigurer.configureIssueFieldsService();
+		loadFieldNames(issueFieldsService);
 		String projectId = jiraMinerConfiguration.getProjectId();
 
 		CacheDTO cacheDTO;
@@ -128,6 +129,7 @@ public class Main {
 						.affectsVersions(extractVersionNames(issue.getFields().getVersions()))
 						.workRatio(issue.getFields().getWorkratio())
 						.issueLinks(extractIssueLinks(issue.getFields().getIssuelinks()))
+						.customFields(extractCustomFields(issue.getFields()))
 						.build())
 				.collect(Collectors.toList());
 	}
@@ -170,6 +172,96 @@ public class Main {
 			.map(Version::getName)
 			.filter(Objects::nonNull)
 			.collect(Collectors.toList());
+	}
+
+	private static Map<String, Object> extractCustomFields(IssueFields fields) {
+		if (fields == null) {
+			return null;
+		}
+		
+		Map<String, Object> customFields = new HashMap<>();
+		
+		// Use reflection to get all fields from the IssueFields object
+		for (Map.Entry<String, Object> entry : fields.entrySet()) {
+			String key = entry.getKey();
+			Object value = entry.getValue();
+			
+			// Only include fields that start with "customfield_"
+			if (key != null && key.startsWith("customfield_") && value != null) {
+				String enhancedKey = getCustomFieldKey(key);
+
+				if (value instanceof String || value instanceof Number || value instanceof Boolean) {
+					customFields.put(enhancedKey, value);
+				} else if (value instanceof Map) {
+					// For map types, try to extract the "value" field if it exists
+					Map<?, ?> mapValue = (Map<?, ?>)value;
+					if (mapValue.containsKey("value")) {
+						customFields.put(enhancedKey, mapValue.get("value"));
+					} else if (mapValue.containsKey("name")) {
+						customFields.put(enhancedKey, mapValue.get("name"));
+					} else {
+						// Otherwise use the whole map
+						customFields.put(enhancedKey, mapValue);
+					}
+				} else if (value instanceof List) {
+					// For list types, try to extract meaningful values
+					List<?> listValue = (List<?>)value;
+					if (!listValue.isEmpty()) {
+						List<Object> processedList = new ArrayList<>();
+						for (Object item : listValue) {
+							if (item instanceof Map) {
+								Map<?, ?> mapItem = (Map<?, ?>)item;
+								if (mapItem.containsKey("value")) {
+									processedList.add(mapItem.get("value"));
+								} else if (mapItem.containsKey("name")) {
+									processedList.add(mapItem.get("name"));
+								} else {
+									processedList.add(mapItem);
+								}
+							} else {
+								processedList.add(item);
+							}
+						}
+						customFields.put(enhancedKey, processedList);
+					}
+				} else {
+					// For other types, use toString but check if it's meaningful
+					String stringValue = value.toString();
+					if (!stringValue.contains("@")) {
+						customFields.put(enhancedKey, stringValue);
+					}
+				}
+			}
+		}
+		
+		return customFields.isEmpty() ? null : customFields;
+	}
+
+	private static String getCustomFieldKey(String key) {
+		String fieldName = fieldNamesById.get(key);
+        return fieldName == null ? key : key + "|" + fieldName;
+	}
+
+	private static void loadFieldNames(IssueFieldsService fieldService) {
+		if (fieldNamesLoaded) {
+			return;
+		}
+		
+		if (fieldService != null) {
+			try {
+				List<IssueField> issueFields = fieldService.getFields();
+				if (issueFields != null) {
+					for (IssueField field : issueFields) {
+						fieldNamesById.put(field.getId(), field.getName());
+					}
+				}
+				log.info("Loaded {} field names from Jira", fieldNamesById.size());
+			} catch (Exception e) {
+				log.warn("Could not fetch field names from Jira", e);
+			}
+		}
+		
+		fieldNamesLoaded = true;
 	}
 
 	private static String getParentOrNull(Issue issue) {
