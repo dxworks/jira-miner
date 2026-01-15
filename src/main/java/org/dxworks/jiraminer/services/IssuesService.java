@@ -102,8 +102,8 @@ public class IssuesService extends JiraApiService {
 
         AtomicInteger progress = new AtomicInteger(1);
 
-        int times = total / maxResults;
-        int[] pages = IntStream.range(1, times).map(i -> i * maxResults).toArray();
+        int[] pages = remainingPageStartAts(total, maxResults);
+        int times = pages.length;
 
         Stream<IssueSearchResult> allResults = getIssueSearchResult(apiPath, maxResults, jqlQuery, progress, times, pages);
 
@@ -111,6 +111,19 @@ public class IssuesService extends JiraApiService {
                 .map(IssueSearchResult::getIssues)
                 .flatMap(List::stream)
                 .collect(Collectors.toList());
+    }
+
+    private static int[] remainingPageStartAts(int total, int maxResults) {
+        int pageCount = pageCount(total, maxResults);
+        return IntStream.range(1, pageCount).map(i -> i * maxResults).toArray();
+    }
+
+    private static int pageCount(int total, int pageSize) {
+        if (total <= 0 || pageSize <= 0) {
+            return 0;
+        }
+
+        return (total + pageSize - 1) / pageSize;
     }
 
     @SneakyThrows

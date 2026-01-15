@@ -29,6 +29,8 @@ public class IssueFields extends GenericJson {
     @Key
     private String updated;
     @Key
+    private String resolutiondate;
+    @Key
     private List<Issue> subtasks;
     @Key
     private IssuePriority priority;
@@ -42,4 +44,20 @@ public class IssueFields extends GenericJson {
     private Long timeestimate;
     @Key
     private Long timespent;
+    @Key
+    private List<String> labels;
+    @Key
+    private List<Version> fixVersions;
+    @Key
+    private List<Version> versions;
+    @Key
+    private String duedate;
+    @Key
+    private Resolution resolution;
+    @Key
+    private String environment;
+    @Key
+    private List<IssueLink> issuelinks;
+    @Key
+    private Double workratio;
 }

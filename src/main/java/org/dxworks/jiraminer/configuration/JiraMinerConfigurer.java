@@ -1,6 +1,7 @@
 package org.dxworks.jiraminer.configuration;
 
 import org.dxworks.jiraminer.services.CommentsService;
+import org.dxworks.jiraminer.services.IssueFieldsService;
 import org.dxworks.jiraminer.services.IssuesService;
 import org.dxworks.jiraminer.services.StatusesService;
 import org.dxworks.utils.java.rest.client.providers.AuthenticationProvider;
@@ -23,6 +24,10 @@ public class JiraMinerConfigurer {
 
 	public CommentsService configureCommentsService() {
 		return new CommentsService(configuration.getJiraHome(), authenticator);
+	}
+
+	public IssueFieldsService configureIssueFieldsService() {
+		return new IssueFieldsService(configuration.getJiraHome(), authenticator);
 	}
 
 	public StatusesService configureStatusesService() {

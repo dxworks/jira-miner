@@ -42,7 +42,7 @@ public class ResultExporter {
 
         List<ExportUser> exportUsers = issues.stream()
                 .flatMap(issue -> Stream.concat(Stream.concat(Stream.of(issue.getCreator(), issue.getReporter(), issue.getAssignee()),
-                        issue.getComments().stream().flatMap(comment -> Stream.of(comment.getAuthor(), comment.getUpdateAuthor()))),
+                        issue.getComments() != null ? issue.getComments().stream().flatMap(comment -> Stream.of(comment.getAuthor(), comment.getUpdateAuthor())) : Stream.empty()),
                         issue.getChangelog().getChanges().stream().map(IssueChange::getAuthor))
                 ).filter(user -> user != null && user.getSelf() != null).distinct()
                 .map(user -> ExportUser.builder()
