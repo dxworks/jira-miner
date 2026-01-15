@@ -14,6 +14,7 @@ exportTypes=detailed,basic
 authentication=cookie
 cookie=JSESSIONID=E96741F7E5C783D3FCC7E82E3874D51B; atlassian.xsrf.token=BBPK-PX8B-NPTB-5W5S_babd22b7c0c76f69c628902b0a08daf1e9bdb609_lin
 useCache=true
+exportCustomFields=true
 ```
 
 The file has the following fields:
@@ -33,6 +34,9 @@ A list of comma separated types for export. Available types are `basic` and `det
 
 #### useCache
 Whether to use the cache or not. If set to true, the app will not request the issues updated after the cache date. If set to false, the app will request all issues from the JIRA server. Default is true.
+
+#### exportCustomFields
+Whether to export custom fields in the `basic` export output. If set to `false`, the `customFields` field will be omitted from the exported issues. Default is `true`.
 
 #### authentication
 There are 4 possible values for this field:
@@ -109,6 +113,7 @@ The application extracts the following fields from all JIRA Issues for the desir
     summary: String
     description: String
     components: List<String>
+    customFields: Map<String, Object>
 ``` 
 
 #### detailed

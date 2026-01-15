@@ -175,6 +175,14 @@ public class Main {
 	}
 
 	private static Map<String, Object> extractCustomFields(IssueFields fields) {
+		JiraMinerConfiguration jiraMinerConfiguration = JiraMinerConfiguration.getInstance();
+		boolean exportCustomFields = CustomFieldsExportConfig.shouldExportCustomFields(
+				jiraMinerConfiguration.getProperty(CustomFieldsExportConfig.EXPORT_CUSTOM_FIELDS)
+		);
+		if (!exportCustomFields) {
+			return null;
+		}
+
 		if (fields == null) {
 			return null;
 		}
