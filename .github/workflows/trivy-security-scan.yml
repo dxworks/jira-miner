@@ -1,0 +1,26 @@
+name: Trivy Security Scan
+
+on:
+  pull_request:
+    branches:
+      - dev
+
+jobs:
+  trivy-fs:
+    uses: dxworks/pipelines/.github/workflows/trivy-fs-scan.yml@v1
+    permissions:
+      contents: read
+      security-events: write
+
+  trivy-image:
+    uses: dxworks/pipelines/.github/workflows/trivy-image-scan.yml@v1
+    with:
+      image-ref: jiraminer:${{ github.sha }}
+      build-context: .
+      build-setup: mvn -B clean package
+      java-version: '21'
+      post-pr-comment: true
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
