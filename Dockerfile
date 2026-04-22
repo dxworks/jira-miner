@@ -1,13 +1,11 @@
-FROM adoptopenjdk:11
+FROM eclipse-temurin:21-jre-alpine
 
+RUN apk upgrade --no-cache && mkdir /opt/jiraminer
 
-RUN mkdir /opt/jiraminer
-
-ARG JAR_FILE
-
-ADD bin/jiraminer.sh /opt/jiraminer
-ADD target/${JAR_FILE} /opt/jiraminer/jiraminer.jar
+COPY bin/jiraminer.sh /opt/jiraminer/
+COPY target/jiraminer.jar /opt/jiraminer/jiraminer.jar
 
 RUN chmod +x /opt/jiraminer/jiraminer.sh
 
 WORKDIR /opt/jiraminer
+ENTRYPOINT ["./jiraminer.sh"]

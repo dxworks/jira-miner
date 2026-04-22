@@ -1,59 +1,64 @@
+name: Release
+
 on:
   push:
     tags:
       - 'v*'
 
-name: Create Release
-
 jobs:
-  release:
-    name: Release
+  parse-tag:
     runs-on: ubuntu-latest
+    outputs:
+      semver: ${{ steps.parse.outputs.semver }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - id: parse
+        run: echo "semver=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Build
-        run: mvn package
+  gate:
+    needs: [parse-tag]
+    uses: dxworks/pipelines/.github/workflows/release-gate.yml@v1
+    with:
+      java-version: '21'
+    permissions:
+      contents: read
+      security-events: write
 
-      - name: Prepare Assets
-        run: |
-          mkdir jiraminer
-          mkdir jiraminer/config
+  archive:
+    needs: [gate, parse-tag]
+    uses: dxworks/pipelines/.github/workflows/release-archive.yml@v1
+    with:
+      version: ${{ needs.parse-tag.outputs.semver }}
+      java-version: '21'
+    permissions:
+      contents: read
 
-          touch ${{ github.workspace }}/releaseNotes/v${{ steps.semver_parser.outputs.semver }}.md
-          cp ${{ github.workspace }}/releaseNotes/v${{ steps.semver_parser.outputs.semver }}.md jiraminer/CHANGELOG.md
-          cp README.md jiraminer/README.md
-          cp docs/jiraminer-config-template.properties jiraminer/config/jiraminer-config.properties
+  docker:
+    needs: [gate, parse-tag]
+    uses: dxworks/pipelines/.github/workflows/release-docker.yml@v1
+    with:
+      version: ${{ needs.parse-tag.outputs.semver }}
+      image-name: dxworks/jiraminer
+      java-version: '21'
+      build-script: ./scripts/build.sh
+    secrets:
+      dockerhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
+      dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
+    permissions:
+      contents: read
+      packages: write
 
-          cp bin/jiraminer.sh jiraminer/jiraminer.sh
-          chmod +x jiraminer/jiraminer.sh
-          cp bin/jiraminer.bat jiraminer/jiraminer.bat
-          cp target/jiraminer.jar jiraminer/jiraminer.jar
-
-      - name: Extract Semver
-        id: semver_parser
-        run: |
-          semver=${TAG#"refs/tags/v"}
-          semver=${semver%"-voyager"}
-          echo ::set-output name=semver::$semver
-        env:
-          TAG: ${{ github.ref }}
-
-      - name: Create Archive
-        run: zip -r jiraminer.zip jiraminer
-
-      - name: Prepare Release Notes
-        run: touch ${{ github.workspace }}/releaseNotes/v${{ steps.semver_parser.outputs.semver }}.md
-
-      - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        with:
-          name: JiraMiner ${{ steps.semver_parser.outputs.semver }}
-          body_path: ${{ github.workspace }}/releaseNotes/v${{ steps.semver_parser.outputs.semver }}.md
-          body: ""
-          prerelease: false
-          draft: false
-          fail_on_unmatched_files: true
-          files: jiraminer.zip
+  github-release:
+    needs: [parse-tag, archive, docker]
+    if: |
+      always() &&
+      needs.archive.result == 'success' &&
+      (needs.docker.result == 'success' || needs.docker.result == 'skipped')
+    uses: dxworks/pipelines/.github/workflows/release-github.yml@v1
+    with:
+      version: ${{ needs.parse-tag.outputs.semver }}
+      tag: ${{ github.ref_name }}
+      release-name: JiraMiner ${{ needs.parse-tag.outputs.semver }}
+      asset-name: jiraminer.zip
+      release-notes-file: releaseNotes/v${{ needs.parse-tag.outputs.semver }}.md
+    permissions:
+      contents: write

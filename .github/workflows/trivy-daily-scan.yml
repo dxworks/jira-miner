@@ -1,0 +1,15 @@
+name: Trivy Daily Scan
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  daily:
+    uses: dxworks/pipelines/.github/workflows/trivy-daily-scan.yml@v1
+    with:
+      image-ref: dxworks/jiraminer:latest
+    permissions:
+      contents: read
+      security-events: write

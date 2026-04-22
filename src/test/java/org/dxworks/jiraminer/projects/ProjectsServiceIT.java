@@ -9,7 +9,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class ProjectsServiceTest {
+class ProjectsServiceIT {
 
     private static final String JIRA_HOME = "https://loose.atlassian.net";
 
