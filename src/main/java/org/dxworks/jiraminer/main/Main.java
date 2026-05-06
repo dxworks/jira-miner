@@ -49,6 +49,11 @@ public class Main {
             log.error("Error getting issues", e);
 		}
 
+		if (issuesAndStatuses == null) {
+			log.error("Skipping export because issues could not be retrieved.");
+			return;
+		}
+
 		log.info("Writing results to file...");
 		ensureResultsFolderExists();
 		String projectID = jiraMinerConfiguration.getProjectId();
