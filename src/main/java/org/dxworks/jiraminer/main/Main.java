@@ -40,27 +40,29 @@ public class Main {
 		log.info("Starting Jira Miner...");
 
         JiraMinerConfiguration jiraMinerConfiguration = JiraMinerConfiguration.getInstance();
-		jiraMinerConfigurer = new JiraMinerConfigurer(jiraMinerConfiguration);
-		ImmutablePair<List<Issue>, List<IssueStatus>> issuesAndStatuses = null;
+		try (JiraMinerConfigurer configurer = new JiraMinerConfigurer(jiraMinerConfiguration)) {
+			jiraMinerConfigurer = configurer;
+			ImmutablePair<List<Issue>, List<IssueStatus>> issuesAndStatuses = null;
 
-		try {
-			issuesAndStatuses = getIssuesAndStatusesCaching(jiraMinerConfiguration);
-		} catch (Exception e) {
-            log.error("Error getting issues", e);
-		}
+			try {
+				issuesAndStatuses = getIssuesAndStatusesCaching(jiraMinerConfiguration);
+			} catch (Exception e) {
+				log.error("Error getting issues", e);
+			}
 
-		if (issuesAndStatuses == null) {
-			log.error("Skipping export because issues could not be retrieved.");
-			return;
-		}
+			if (issuesAndStatuses == null) {
+				log.error("Skipping export because issues could not be retrieved.");
+				return;
+			}
 
-		log.info("Writing results to file...");
-		ensureResultsFolderExists();
-		String projectID = jiraMinerConfiguration.getProjectId();
+			log.info("Writing results to file...");
+			ensureResultsFolderExists();
+			String projectID = jiraMinerConfiguration.getProjectId();
 			writeBasicIssuesToFile(projectID, issuesAndStatuses.left);
 
-		if (jiraMinerConfiguration.needsDetailedExport()) {
-			new ResultExporter().export(issuesAndStatuses.left, issuesAndStatuses.right, getOutputFIle(projectID + "-detailed"));
+			if (jiraMinerConfiguration.needsDetailedExport()) {
+				new ResultExporter().export(issuesAndStatuses.left, issuesAndStatuses.right, getOutputFIle(projectID + "-detailed"));
+			}
 		}
 		log.info("Finished Jira Miner.");
 	}

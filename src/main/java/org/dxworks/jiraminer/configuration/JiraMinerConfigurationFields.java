@@ -18,4 +18,9 @@ public interface JiraMinerConfigurationFields {
     String JIRA_HOME = "jira_home";
     String EXPORT_TYPES = "exportTypes";
     String USE_CACHE = "useCache";
+
+    String RATE_LIMIT_MAX_CONCURRENT = "rateLimit.maxConcurrent";
+    String RATE_LIMIT_REQUESTS_PER_SECOND = "rateLimit.requestsPerSecond";
+    String RATE_LIMIT_MAX_RETRY_ATTEMPTS = "rateLimit.maxRetryAttempts";
+    String RATE_LIMIT_MAX_BACKOFF_SECONDS = "rateLimit.maxBackoffSeconds";
 }

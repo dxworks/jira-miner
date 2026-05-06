@@ -34,7 +34,7 @@ public class WorklogService extends JiraApiService {
 
     public List<Long> getWorkLogIdsModifiedSince(Long since) {
         String apiPath = getApiPath("worklog", "updated");
-        HttpResponse httpResponse = getHttpClient().get(new UpdatedWorkLogsUrl(apiPath, since), null);
+        HttpResponse httpResponse = rlGet(new UpdatedWorkLogsUrl(apiPath, since));
 
         return parseIfOk(httpResponse, UpdatedWorkLogsResponse.class)
             .map(UpdatedWorkLogsResponse::getValues)
@@ -47,7 +47,7 @@ public class WorklogService extends JiraApiService {
 
     public List<WorkLog> listWorkLogsForIds(List<Long> ids) {
         String apiPath = getApiPath("worklog", "list");
-        HttpResponse httpResponse = getHttpClient().post(new GenericUrl(apiPath), new ListWorkLogsRequest(ids), null);
+        HttpResponse httpResponse = rlPost(new GenericUrl(apiPath), new ListWorkLogsRequest(ids));
 
         return parseListIfOk(httpResponse, WorkLog[].class);
     }

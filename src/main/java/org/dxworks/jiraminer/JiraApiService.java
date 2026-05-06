@@ -1,7 +1,11 @@
 package org.dxworks.jiraminer;
 
+import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequestInitializer;
 import lombok.extern.slf4j.Slf4j;
+import org.dxworks.jiraminer.ratelimit.JiraRateLimitDetector;
+import org.dxworks.jiraminer.ratelimit.RateLimitConfig;
+import org.dxworks.jiraminer.ratelimit.RateLimitedExecutor;
 import org.dxworks.utils.java.rest.client.RestClient;
 import org.dxworks.utils.java.rest.client.response.HttpResponse;
 
@@ -17,6 +21,21 @@ public class JiraApiService extends RestClient {
 
     protected String jiraHome;
     protected String apiVersion;
+
+    /**
+     * Single chokepoint for all outbound HTTP. Defaults to a per-process
+     * fallback so existing tests/clients keep working without explicit wiring.
+     * In production code paths {@link #setRateLimitedExecutor(RateLimitedExecutor)}
+     * is called by the configurer with a per-run executor.
+     */
+    private RateLimitedExecutor rateLimitedExecutor = RateLimitedExecutor.defaults();
+
+    /**
+     * Translates Jira's HTTP rate-limit signals (429 + Retry-After + RateLimit-Reason)
+     * into {@link org.dxworks.jiraminer.ratelimit.RateLimitException} so the executor's retry pipeline can act on them.
+     * Default uses the same config as the default executor; overridden by the configurer.
+     */
+    private JiraRateLimitDetector rateLimitDetector = new JiraRateLimitDetector(RateLimitConfig.defaults());
 
     public JiraApiService(String jiraHome) {
         super(getApiUrl(jiraHome, JIRA_REST_API_DEFAULT_VERSION));
@@ -65,5 +84,41 @@ public class JiraApiService extends RestClient {
 
     protected <T> List<T> parseListIfOk(HttpResponse httpResponse, Class<T[]> clazz) {
         return parseIfOk(httpResponse, clazz).map(Arrays::asList).orElseGet(Collections::emptyList);
+    }
+
+    public RateLimitedExecutor getRateLimitedExecutor() {
+        return rateLimitedExecutor;
+    }
+
+    public void setRateLimitedExecutor(RateLimitedExecutor rateLimitedExecutor) {
+        if (rateLimitedExecutor == null) {
+            throw new IllegalArgumentException("rateLimitedExecutor must not be null");
+        }
+        this.rateLimitedExecutor = rateLimitedExecutor;
+    }
+
+    public void setRateLimitDetector(JiraRateLimitDetector rateLimitDetector) {
+        if (rateLimitDetector == null) {
+            throw new IllegalArgumentException("rateLimitDetector must not be null");
+        }
+        this.rateLimitDetector = rateLimitDetector;
+    }
+
+    /**
+     * Rate-limited GET. Use this instead of {@code getHttpClient().get(url, null)} so all
+     * outbound traffic flows through the single {@link RateLimitedExecutor} chokepoint
+     * (concurrency cap, RPS limiter, retry/jitter, Retry-After + tenant-quota handling).
+     */
+    protected HttpResponse rlGet(GenericUrl url) {
+        return rateLimitedExecutor.executeChecked(
+                () -> rateLimitDetector.throwIfRateLimited(getHttpClient().get(url, null)));
+    }
+
+    /**
+     * Rate-limited POST. See {@link #rlGet(GenericUrl)}.
+     */
+    protected HttpResponse rlPost(GenericUrl url, Object body) {
+        return rateLimitedExecutor.executeChecked(
+                () -> rateLimitDetector.throwIfRateLimited(getHttpClient().post(url, body, null)));
     }
 }

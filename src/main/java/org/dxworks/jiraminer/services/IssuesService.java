@@ -12,25 +12,18 @@ import org.dxworks.jiraminer.dto.response.issues.worklog.WorkLog;
 import org.dxworks.jiraminer.dto.response.issues.worklog.WorkLogsResponse;
 import org.dxworks.jiraminer.pagination.IssueChangelogUrl;
 import org.dxworks.utils.java.rest.client.response.HttpResponse;
-import org.jetbrains.annotations.NotNull;
 
-import java.net.SocketTimeoutException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 
 @Slf4j
 public class IssuesService extends JiraApiService {
-    private static final int MAX_RETRY_ATTEMPTS = 6;
-    private static final long INITIAL_BACKOFF_MILLIS = 5000;
-    private static final long MAX_BACKOFF_MILLIS = 60000;
-
 
     public IssuesService(String jiraHome, HttpRequestInitializer httpRequestInitializer) {
         super(jiraHome, httpRequestInitializer);
@@ -54,7 +47,7 @@ public class IssuesService extends JiraApiService {
 
         int total;
         do {
-            HttpResponse httpResponse = getHttpClient().get(new IssueChangelogUrl(apiPath, startAt, maxResults), null);
+            HttpResponse httpResponse = rlGet(new IssueChangelogUrl(apiPath, startAt, maxResults));
             Optional<Issue> issue = parseIfOk(httpResponse, Issue.class);
             issue.map(Issue::getChangelog).map(ChangeLog::getChanges).ifPresent(allChanges::addAll);
 
@@ -71,7 +64,7 @@ public class IssuesService extends JiraApiService {
 
         List<WorkLog> allWorkLogs = new ArrayList<>();
 
-        HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
+        HttpResponse httpResponse = rlGet(new GenericUrl(apiPath));
         Optional<WorkLogsResponse> workLogsResponse = parseIfOk(httpResponse, WorkLogsResponse.class);
         workLogsResponse.map(WorkLogsResponse::getWorklogs).ifPresent(allWorkLogs::addAll);
 
@@ -99,21 +92,25 @@ public class IssuesService extends JiraApiService {
 
         String jqlQuery = createJqlQuery(updatedAfter, updatedBefore, projectKeys);
 
-        IssueSearchResult searchResult = getFirstPageWithRetry(apiPath, jqlQuery, maxResults);
+        IssueSearchResult firstPage = searchIssues(apiPath, jqlQuery, maxResults, 0);
 
-        int total = searchResult.getTotal();
-
-        AtomicInteger progress = new AtomicInteger(1);
-
+        int total = firstPage.getTotal();
         int[] pages = remainingPageStartAts(total, maxResults);
         int times = pages.length;
+        AtomicInteger progress = new AtomicInteger(1);
 
-        Stream<IssueSearchResult> allResults = getIssueSearchResult(apiPath, maxResults, jqlQuery, progress, times, pages);
+        List<IssueSearchResult> remainingPages = getRateLimitedExecutor().submitAll(
+                pages,
+                startAt -> {
+                    IssueSearchResult page = searchIssues(apiPath, jqlQuery, maxResults, startAt);
+                    log.info("Completed Step {} / {}", progress.getAndIncrement(), times);
+                    return page;
+                });
 
-        return Stream.concat(Stream.of(searchResult), allResults)
-                .map(IssueSearchResult::getIssues)
-                .flatMap(List::stream)
-                .collect(Collectors.toList());
+        List<Issue> all = new ArrayList<>();
+        all.addAll(firstPage.getIssues());
+        remainingPages.stream().map(IssueSearchResult::getIssues).forEach(all::addAll);
+        return all;
     }
 
     private static int[] remainingPageStartAts(int total, int maxResults) {
@@ -129,75 +126,6 @@ public class IssuesService extends JiraApiService {
         return (total + pageSize - 1) / pageSize;
     }
 
-    @SneakyThrows
-    @NotNull
-    private Stream<IssueSearchResult> getIssueSearchResult(String apiPath, int maxResults, String jqlQuery, AtomicInteger progress, int times, int[] pages) {
-        if (pages.length == 0)
-            return Stream.empty();
-
-        return IntStream.of(pages)
-                .parallel()
-                .mapToObj(startAt -> getIssues(apiPath, maxResults, jqlQuery, progress, times, startAt));
-    }
-
-    private IssueSearchResult getFirstPageWithRetry(String apiPath, String jqlQuery, int maxResults) {
-        return getIssuesWithRetry(apiPath, maxResults, jqlQuery, 0);
-    }
-
-    private long backoffMillis(int attempt) {
-        long exponential = INITIAL_BACKOFF_MILLIS * (1L << Math.max(0, attempt - 1));
-        return Math.min(exponential, MAX_BACKOFF_MILLIS);
-    }
-
-    private IssueSearchResult getIssues(String apiPath, int maxResults, String jqlQuery, AtomicInteger progress, int times, int startAt) {
-        IssueSearchResult issues = getIssuesWithRetry(apiPath, maxResults, jqlQuery, startAt);
-        log.info("Completed Step {} / {}", progress.getAndIncrement(), times);
-        return issues;
-    }
-
-    @SneakyThrows
-    private IssueSearchResult getIssuesWithRetry(String apiPath, int maxResults, String jqlQuery, int startAt) {
-        for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
-            IssueSearchResult result = searchIssues(apiPath, jqlQuery, maxResults, startAt);
-            if (!(result instanceof IssueSearchResultWithErrors)) {
-                return result;
-            }
-
-            IssueSearchResultWithErrors error = (IssueSearchResultWithErrors) result;
-            HttpResponse response = error.getHttpResponse();
-            boolean timedOut = response == null;
-            boolean rateLimited = response != null && response.getStatusCode() == 429;
-
-            if (!timedOut && !rateLimited) {
-                throw new IllegalStateException(String.format(
-                        "Non-retriable issue page failure for startAt=%d, status=%d.",
-                        startAt,
-                        response.getStatusCode()
-                ));
-            }
-
-            if (attempt == MAX_RETRY_ATTEMPTS) {
-                throw new IllegalStateException(String.format(
-                        "Retry limit reached for issue page startAt=%d after %d attempts (%s)",
-                        startAt,
-                        attempt,
-                        timedOut ? "timeout" : "429"
-                ));
-            }
-
-            long backoffMillis = backoffMillis(attempt);
-            log.warn("Retrying issue page startAt={} in {} ms after {} (attempt {}/{})",
-                    startAt,
-                    backoffMillis,
-                    timedOut ? "timeout" : "429",
-                    attempt + 1,
-                    MAX_RETRY_ATTEMPTS);
-            Thread.sleep(backoffMillis);
-        }
-
-        throw new IllegalStateException(String.format("Could not fetch issue page startAt=%d", startAt));
-    }
-
     public void addChangeLog(Issue issue) {
         if (issue.getChangelog().getMaxResults() < issue.getChangelog().getTotal()) {
             issue.getChangelog().getChanges().addAll(getChangeLogForIssue(issue.getKey(), issue.getChangelog().getMaxResults()));
@@ -205,35 +133,15 @@ public class IssuesService extends JiraApiService {
     }
 
     private IssueSearchResult searchIssues(String apiPath, String jqlQuery, int maxResults, int startAt) {
-        JiraIssuesRequestBody jiraIssuesRequestBody = new JiraIssuesRequestBody(jqlQuery, startAt, maxResults, singletonList("changelog"));
-        try {
-            HttpResponse httpResponse = getHttpClient().post(new GenericUrl(apiPath),
-                    jiraIssuesRequestBody, null);
-            if (!httpResponse.isSuccessStatusCode()) {
-                log.warn("Failed Request: {} {} for {} {}", httpResponse.getStatusCode(), httpResponse.getStatusMessage(), httpResponse.getRequest().getUrl(), jiraIssuesRequestBody);
-                httpResponse.parseAsString();
-                return new IssueSearchResultWithErrors(httpResponse, startAt);
-            }
-            return parseIfOk(httpResponse, IssueSearchResult.class).orElseGet(IssueSearchResult::new);
-        } catch (Exception e) {
-            if (isTimeoutException(e)) {
-                log.warn("Search issues timed out for startAt {}", startAt);
-                return new IssueSearchResultWithErrors(null, startAt);
-            }
-
-            throw new IllegalStateException(String.format("Search issues failed for startAt %d", startAt), e);
+        JiraIssuesRequestBody body = new JiraIssuesRequestBody(jqlQuery, startAt, maxResults, singletonList("changelog"));
+        HttpResponse httpResponse = rlPost(new GenericUrl(apiPath), body);
+        if (!httpResponse.isSuccessStatusCode()) {
+            log.warn("Failed Request: {} {} for {} {}", httpResponse.getStatusCode(), httpResponse.getStatusMessage(), httpResponse.getRequest().getUrl(), body);
+            httpResponse.parseAsString();
+            throw new IllegalStateException(String.format(
+                    "Search issues failed for startAt=%d with status=%d", startAt, httpResponse.getStatusCode()));
         }
-    }
-
-    private boolean isTimeoutException(Throwable throwable) {
-        Throwable current = throwable;
-        while (current != null) {
-            if (current instanceof SocketTimeoutException) {
-                return true;
-            }
-            current = current.getCause();
-        }
-        return false;
+        return parseIfOk(httpResponse, IssueSearchResult.class).orElseGet(IssueSearchResult::new);
     }
 
     private String createJqlQuery(LocalDate updatedAfter, LocalDate updatedBefore, String... existingJiraProjects) {

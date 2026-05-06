@@ -23,7 +23,7 @@ public class StatusesService extends JiraApiService {
     @SneakyThrows
     public List<IssueStatus> getAllStatuses() {
         log.info("Getting statuses.");
-        HttpResponse response = getHttpClient().get(new GenericUrl(getApiPath("status")), null);
+        HttpResponse response = rlGet(new GenericUrl(getApiPath("status")));
         return parseListIfOk(response, IssueStatus[].class);
     }
 }

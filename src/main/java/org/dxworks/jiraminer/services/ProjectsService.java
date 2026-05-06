@@ -26,7 +26,7 @@ public class ProjectsService extends JiraApiService {
 
         String apiPath = getApiPath("project");
 
-        HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
+        HttpResponse httpResponse = rlGet(new GenericUrl(apiPath));
         return parseListIfOk(httpResponse, Project[].class);
     }
 
@@ -35,7 +35,7 @@ public class ProjectsService extends JiraApiService {
 
         String apiPath = getApiPath(ImmutableMap.of("projectKey", projectKey), "project", ":projectKey");
 
-        HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
+        HttpResponse httpResponse = rlGet(new GenericUrl(apiPath));
 
         return parseIfOk(httpResponse, Project.class);
     }

@@ -3,6 +3,7 @@ package org.dxworks.jiraminer.configuration;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.dxworks.jiraminer.ratelimit.RateLimitConfig;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -22,6 +23,10 @@ import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.J
 import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.JIRA_MINER_CONFIG_FILE;
 import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.JIRA_PROJECTS_FIELD;
 import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.PROJECT_ID;
+import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.RATE_LIMIT_MAX_BACKOFF_SECONDS;
+import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.RATE_LIMIT_MAX_CONCURRENT;
+import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.RATE_LIMIT_MAX_RETRY_ATTEMPTS;
+import static org.dxworks.jiraminer.configuration.JiraMinerConfigurationFields.RATE_LIMIT_REQUESTS_PER_SECOND;
 
 @Data
 @Slf4j
@@ -106,11 +111,34 @@ public class JiraMinerConfiguration {
         return (String) configurationProperties.getOrDefault(key, defaultValue);
     }
 
+    public int getIntOrDefault(String key, int defaultValue) {
+        String raw = configurationProperties.getProperty(key);
+        if (raw == null || raw.trim().isEmpty()) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException e) {
+            log.warn("Invalid integer for {}: '{}'. Falling back to default {}.", key, raw, defaultValue);
+            return defaultValue;
+        }
+    }
+
     public boolean useCache() {
         return useCache;
     }
 
     public boolean needsDetailedExport() {
         return exportTypes.contains(ExportType.DETAILED);
+    }
+
+    public RateLimitConfig getRateLimitConfig() {
+        RateLimitConfig defaults = RateLimitConfig.defaults();
+        return RateLimitConfig.builder()
+                .maxConcurrent(getIntOrDefault(RATE_LIMIT_MAX_CONCURRENT, defaults.getMaxConcurrent()))
+                .requestsPerSecond(getIntOrDefault(RATE_LIMIT_REQUESTS_PER_SECOND, defaults.getRequestsPerSecond()))
+                .maxRetryAttempts(getIntOrDefault(RATE_LIMIT_MAX_RETRY_ATTEMPTS, defaults.getMaxRetryAttempts()))
+                .maxBackoffSeconds(getIntOrDefault(RATE_LIMIT_MAX_BACKOFF_SECONDS, defaults.getMaxBackoffSeconds()))
+                .build();
     }
 }

@@ -38,6 +38,22 @@ Whether to use the cache or not. If set to true, the app will not request the is
 #### exportCustomFields
 Whether to export custom fields in the `basic` export output. If set to `false`, the `customFields` field will be omitted from the exported issues. Default is `true`.
 
+#### Rate limiting
+All outbound REST calls flow through a single shared rate-limit pipeline (Resilience4j `RateLimiter` + `Retry` plus a fixed-size worker pool). It honors the Atlassian Cloud `Retry-After` header, applies exponential backoff with jitter, and pauses every request for the run when the server signals a tenant-wide quota exhaustion (`RateLimit-Reason: jira-quota-tenant-based` or `jira-quota-global-based`) so a single jira-miner run cannot starve teammates or other clients on the same tenant.
+
+All four knobs are optional. Defaults are conservative:
+
+```properties
+# Maximum concurrent in-flight HTTP requests. Lower if you share a tenant w/ other heavy clients.
+rateLimit.maxConcurrent=4
+# Steady-state requests per second per process.
+rateLimit.requestsPerSecond=20
+# Maximum attempts per request on 429 / IO error / timeout (includes the first call).
+rateLimit.maxRetryAttempts=6
+# Cap on exponential backoff between attempts. The server's Retry-After can push waits higher.
+rateLimit.maxBackoffSeconds=60
+```
+
 #### authentication
 There are 4 possible values for this field:
 

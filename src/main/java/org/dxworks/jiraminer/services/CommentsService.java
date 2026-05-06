@@ -2,7 +2,6 @@ package org.dxworks.jiraminer.services;
 
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequestInitializer;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.dxworks.jiraminer.JiraApiService;
@@ -12,10 +11,7 @@ import org.dxworks.jiraminer.dto.response.issues.comments.IssueComment;
 import org.dxworks.utils.java.rest.client.response.HttpResponse;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 public class CommentsService extends JiraApiService {
@@ -35,41 +31,38 @@ public class CommentsService extends JiraApiService {
     public List<IssueComment> getComments(String issueKey) {
         String apiPath = getApiPath("issue", issueKey, "comment");
         log.info("Getting comments for issue {}.", issueKey);
-        HttpResponse httpResponse = getHttpClient().get(new GenericUrl(apiPath), null);
-
-        if (httpResponse.getStatusCode() == 429) {
-            log.warn("Failed Request: {} {} for {}", httpResponse.getStatusCode(), httpResponse.getStatusMessage(), httpResponse.getRequest().getUrl());
-            httpResponse.parseAsString();
-            return null;
-        }
-
+        HttpResponse httpResponse = rlGet(new GenericUrl(apiPath));
         return parseIfOk(httpResponse, CommentsSearchResult.class)
-            .map(CommentsSearchResult::getComments)
-            .orElseGet(Collections::emptyList);
+                .map(CommentsSearchResult::getComments)
+                .orElseGet(Collections::emptyList);
     }
 
-    @SneakyThrows
+    /**
+     * Fetch comments for every issue concurrently through the shared rate-limited
+     * executor, then attach the result. Per-issue failures are logged and the issue
+     * is left without comments rather than aborting the entire run.
+     */
     public void addCommentsToIssues(List<Issue> issues) {
-        if(CollectionUtils.isEmpty(issues))
+        if (CollectionUtils.isEmpty(issues)) {
             return;
-
-        Map<Issue, List<IssueComment>> issuesWithComments = issues.parallelStream()
-            .collect(HashMap::new, (m, issue) -> m.put(issue, getComments(issue)), HashMap::putAll);
-
-        issuesWithComments.entrySet().stream()
-            .filter(e -> e.getValue() != null)
-            .forEach(e -> e.getKey().setComments(e.getValue()));
-
-        List<Issue> issuesWithFailedCommentRequests = issuesWithComments.entrySet().stream()
-            .filter(e -> e.getValue() == null)
-            .map(Map.Entry::getKey)
-            .collect(Collectors.toList());
-
-        if(!issuesWithFailedCommentRequests.isEmpty()) {
-            log.warn("Waiting for 5s to request comments for {} issues", issuesWithFailedCommentRequests.size());
-            Thread.sleep(5000);
         }
 
-        addCommentsToIssues(issuesWithFailedCommentRequests);
+        List<List<IssueComment>> commentsPerIssue = getRateLimitedExecutor().submitAll(
+                issues,
+                issue -> {
+                    try {
+                        return getComments(issue);
+                    } catch (Exception e) {
+                        log.warn("Could not fetch comments for issue {}: {}", issue.getKey(), e.getMessage());
+                        return null;
+                    }
+                });
+
+        for (int i = 0; i < issues.size(); i++) {
+            List<IssueComment> comments = commentsPerIssue.get(i);
+            if (comments != null) {
+                issues.get(i).setComments(comments);
+            }
+        }
     }
 }
