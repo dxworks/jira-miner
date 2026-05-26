@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -139,6 +140,25 @@ class CommentsServiceTest extends ServerInfoTestBase {
 
         assertEquals(2, requestedIssueKeys.size());
         assertTrue(requestedIssueKeys.containsAll(List.of(ISSUE_WITH_FAILED_FETCH, ISSUE_WITHOUT_COMMENTS)));
+    }
+
+    @Test
+    void addCommentsToIssuesPropagatesRateLimitAbort() {
+        IllegalStateException tenantQuotaAbort = new IllegalStateException("tenant quota exhausted");
+        CommentsService service = new CommentsService(context()) {
+            @Override
+            public List<IssueComment> getComments(Issue issue) {
+                throw tenantQuotaAbort;
+            }
+        };
+
+        Issue issue = new Issue();
+        issue.setKey(ISSUE_WITHOUT_COMMENTS);
+
+        CompletionException thrown = assertThrows(CompletionException.class,
+                () -> service.addCommentsToIssues(List.of(issue)));
+        assertSame(tenantQuotaAbort, thrown.getCause());
+        assertNull(issue.getComments());
     }
 
     @Test

@@ -66,6 +66,8 @@ public class CommentsService extends JiraApiService {
                 issue -> {
                     try {
                         return getComments(issue);
+                    } catch (IllegalStateException e) {
+                        throw e;
                     } catch (Exception e) {
                         log.warn("Could not fetch comments for issue {}: {}", issue.getKey(), e.getMessage());
                         return null;
