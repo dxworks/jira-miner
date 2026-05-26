@@ -44,12 +44,20 @@ public class JiraMinerConfiguration {
 
     public static JiraMinerConfiguration getInstance() {
         if (_instance == null)
-            _instance = new JiraMinerConfiguration();
+            _instance = fromConfigurationFile();
         return _instance;
     }
 
-    private JiraMinerConfiguration() {
-        readConfigurationFile();
+    public JiraMinerConfiguration() {
+        configurationProperties = new Properties();
+        authenticationType = AuthenticationType.NONE;
+        exportTypes = List.of();
+    }
+
+    private static JiraMinerConfiguration fromConfigurationFile() {
+        JiraMinerConfiguration configuration = new JiraMinerConfiguration();
+        configuration.readConfigurationFile();
+        return configuration;
     }
 
     private void readConfigurationFile() {

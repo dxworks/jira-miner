@@ -42,7 +42,11 @@ public class Main {
 		log.info("Starting Jira Miner...");
 
         JiraMinerConfiguration jiraMinerConfiguration = JiraMinerConfiguration.getInstance();
+		run(jiraMinerConfiguration);
+		log.info("Finished Jira Miner.");
+	}
 
+	static void run(JiraMinerConfiguration jiraMinerConfiguration) {
 		// Detect deployment type before any issue retrieval - fail fast if detection fails
 		HttpRequestInitializer requestInitializer = JiraMinerConfigurer.getAuthenticator(jiraMinerConfiguration);
 		JiraDeploymentContext deploymentContext = JiraDeploymentContextFactory.detect(jiraMinerConfiguration.getJiraHome(), requestInitializer);
@@ -77,7 +81,6 @@ public class Main {
 				);
 			}
 		}
-		log.info("Finished Jira Miner.");
 	}
 
 	private static ImmutablePair<List<Issue>, List<IssueStatus>> getIssuesAndStatusesCaching(JiraMinerConfiguration jiraMinerConfiguration) {

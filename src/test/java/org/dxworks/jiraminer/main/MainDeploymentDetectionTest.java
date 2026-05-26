@@ -17,13 +17,13 @@ class MainDeploymentDetectionTest extends ServerInfoTestBase {
         startServerWithServerInfoHandler(this::respondWithoutDeploymentType);
 
         // And configuration pointing to that server
-        JiraMinerConfiguration config = JiraMinerConfiguration.getInstance();
+        JiraMinerConfiguration config = new JiraMinerConfiguration();
         config.setJiraHome(jiraHome);
         config.setProjects(Collections.singletonList("TEST"));
         config.setProjectId("TEST");
         config.setUseCache(false);
 
         // When/Then main should fail fast with IllegalStateException
-        assertThrows(IllegalStateException.class, () -> Main.main(new String[]{}));
+        assertThrows(IllegalStateException.class, () -> Main.run(config));
     }
 }
