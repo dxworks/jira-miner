@@ -1,15 +1,14 @@
 package org.dxworks.jiraminer.export;
 
-import lombok.SneakyThrows;
-import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.dxworks.jiraminer.customfields.CustomFieldMapper;
+import org.dxworks.jiraminer.deployment.DeploymentType;
+import org.dxworks.jiraminer.deployment.JiraDeploymentContext;
 import org.dxworks.jiraminer.dto.response.issues.*;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueComment;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatusCategory;
-import org.dxworks.utils.java.rest.client.utils.JsonMapper;
+import org.dxworks.jiraminer.dto.response.users.User;
 
-import java.io.File;
-import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -18,20 +17,13 @@ import java.util.stream.Stream;
 
 import static java.util.Collections.emptyList;
 
-public class ResultExporter {
+public class DetailedResultMapper {
 
     public static final String AVATAR_RESOLUTION = "32x32";
+    private final JiraDeploymentContext deploymentContext;
 
-    public void export(List<Issue> issues, List<IssueStatus> issueStatuses, File toFile) {
-        export(issues, issueStatuses, toFile, emptyList());
-    }
-
-    @SneakyThrows
-    public void export(List<Issue> issues, List<IssueStatus> issueStatuses, File toFile,
-                       List<IssueField> customFields) {
-        JiraProjectResult exportResult = getExportResult(issues, issueStatuses, customFields);
-
-        new JsonMapper().writeJSONtoFile(toFile, exportResult, Charset.defaultCharset());
+    public DetailedResultMapper(JiraDeploymentContext deploymentContext) {
+        this.deploymentContext = deploymentContext;
     }
 
     public JiraProjectResult getExportResult(List<Issue> issues, List<IssueStatus> issueStatuses,
@@ -49,6 +41,7 @@ public class ResultExporter {
                         .self(user.getSelf())
                         .key(user.getKey())
                         .accountId(user.getAccountId())
+                        .qualifiedUserId(generateQualifiedUserId(user))
                         .emailAddress(user.getEmailAddress())
                         .name(user.getDisplayName())
                         .avatarUrl((String) user.getAvatarUrls().get(AVATAR_RESOLUTION))
@@ -128,9 +121,17 @@ public class ResultExporter {
     }
 
     private Map<String, Object> getCustomFields(Issue issue, List<IssueField> customFields) {
-        return customFields.stream().map(field -> new ImmutablePair<>(field.getName(), issue.get(field.getId())))
-                .filter(pair -> pair.getRight() != null)
-                .collect(Collectors.toMap(ImmutablePair::getLeft, ImmutablePair::getRight));
+        return CustomFieldMapper.fromIssueAndDefinitions(issue, customFields);
+    }
+
+    private String generateQualifiedUserId(User user) {
+        DeploymentType deploymentType = deploymentContext.getDeploymentType();
+        if (deploymentType == DeploymentType.Cloud) {
+            return "cloud:" + user.getAccountId();
+        } else {
+            // Server or Data Center
+            return "server:" + user.getKey();
+        }
     }
 
     private List<ExportComment> getComments(Issue issue) {

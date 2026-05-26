@@ -14,6 +14,8 @@ public class ExportUser {
     @Key
     private String key;
     @Key
+    private String qualifiedUserId;
+    @Key
     private String emailAddress;
     @Key
     private String name;

@@ -1,10 +1,10 @@
 package org.dxworks.jiraminer.services;
 
 import com.google.api.client.http.GenericUrl;
-import com.google.api.client.http.HttpRequestInitializer;
 import com.google.common.collect.ImmutableMap;
 import lombok.SneakyThrows;
 import org.dxworks.jiraminer.JiraApiService;
+import org.dxworks.jiraminer.deployment.JiraDeploymentContext;
 import org.dxworks.jiraminer.dto.response.projects.Project;
 import org.dxworks.utils.java.rest.client.response.HttpResponse;
 
@@ -13,12 +13,8 @@ import java.util.Optional;
 
 public class ProjectsService extends JiraApiService {
 
-    public ProjectsService(String jiraHome, HttpRequestInitializer httpRequestInitializer) {
-        super(jiraHome, httpRequestInitializer);
-    }
-
-    public ProjectsService(String jiraHome) {
-        super(jiraHome);
+    public ProjectsService(JiraDeploymentContext context) {
+        super(context.getJiraHome(), context.getApiVersion(), context.getRequestInitializer());
     }
 
     @SneakyThrows

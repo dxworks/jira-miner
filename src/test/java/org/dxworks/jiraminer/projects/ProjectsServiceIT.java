@@ -1,6 +1,7 @@
 package org.dxworks.jiraminer.projects;
 
 import org.dxworks.jiraminer.TestUtils;
+import org.dxworks.jiraminer.deployment.JiraDeploymentContext;
 import org.dxworks.jiraminer.dto.response.projects.Project;
 import org.dxworks.jiraminer.services.ProjectsService;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,8 @@ class ProjectsServiceIT {
 
     @Test
     void getAllProjects() {
-        projectsService = new ProjectsService(JIRA_HOME, TestUtils.getJiraAuthenticator());
+        JiraDeploymentContext deploymentContext = TestUtils.getDeploymentContext(JIRA_HOME);
+        projectsService = new ProjectsService(deploymentContext);
 
         List<Project> projects = projectsService.getAllProjects();
 

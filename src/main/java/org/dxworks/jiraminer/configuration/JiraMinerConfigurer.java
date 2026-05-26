@@ -1,6 +1,7 @@
 package org.dxworks.jiraminer.configuration;
 
 import org.dxworks.jiraminer.JiraApiService;
+import org.dxworks.jiraminer.deployment.JiraDeploymentContext;
 import org.dxworks.jiraminer.ratelimit.JiraRateLimitDetector;
 import org.dxworks.jiraminer.ratelimit.RateLimitedExecutor;
 import org.dxworks.jiraminer.services.CommentsService;
@@ -12,33 +13,32 @@ import org.dxworks.utils.java.rest.client.providers.BasicAuthenticationProvider;
 import org.dxworks.utils.java.rest.client.providers.CookieAuthenticationProvider;
 
 public class JiraMinerConfigurer implements AutoCloseable {
-	private final JiraMinerConfiguration configuration;
-	private final AuthenticationProvider authenticator;
 	private final RateLimitedExecutor rateLimitedExecutor;
 	private final JiraRateLimitDetector rateLimitDetector;
+	private final JiraDeploymentContext deploymentContext;
+	private final ExportType exportType;
 
-	public JiraMinerConfigurer(JiraMinerConfiguration configuration) {
-
-		this.configuration = configuration;
-		this.authenticator = getAuthenticator(configuration);
+	public JiraMinerConfigurer(JiraMinerConfiguration configuration, JiraDeploymentContext deploymentContext, ExportType exportType) {
 		this.rateLimitedExecutor = new RateLimitedExecutor(configuration.getRateLimitConfig());
 		this.rateLimitDetector = new JiraRateLimitDetector(configuration.getRateLimitConfig());
+		this.deploymentContext = deploymentContext;
+		this.exportType = exportType;
 	}
 
 	public IssuesService configureIssuesService() {
-		return wire(new IssuesService(configuration.getJiraHome(), authenticator));
+		return wire(new IssuesService(deploymentContext, exportType));
 	}
 
 	public CommentsService configureCommentsService() {
-		return wire(new CommentsService(configuration.getJiraHome(), authenticator));
+		return wire(new CommentsService(deploymentContext));
 	}
 
 	public IssueFieldsService configureIssueFieldsService() {
-		return wire(new IssueFieldsService(configuration.getJiraHome(), authenticator));
+		return wire(new IssueFieldsService(deploymentContext));
 	}
 
 	public StatusesService configureStatusesService() {
-		return wire(new StatusesService(configuration.getJiraHome(), authenticator));
+		return wire(new StatusesService(deploymentContext));
 	}
 
 	private <T extends JiraApiService> T wire(T service) {

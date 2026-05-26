@@ -8,8 +8,7 @@ import java.util.List;
 
 class CommentsServiceIT {
     public static final String ISSUE_KEY = "IG-11";
-    private final CommentsService commentsService = new CommentsService(TestUtils.getJiraHome(),
-            TestUtils.getJiraAuthenticator());
+    private final CommentsService commentsService = new CommentsService(TestUtils.getDeploymentContext());
 
     @Test
     void getComments() {

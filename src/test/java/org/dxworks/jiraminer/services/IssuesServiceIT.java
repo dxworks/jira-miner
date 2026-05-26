@@ -1,10 +1,12 @@
 package org.dxworks.jiraminer.services;
 
 import org.dxworks.jiraminer.TestUtils;
+import org.dxworks.jiraminer.configuration.ExportType;
+import org.dxworks.jiraminer.deployment.JiraDeploymentContext;
+import org.dxworks.jiraminer.deployment.JiraDeploymentContextFactory;
 import org.dxworks.jiraminer.dto.response.issues.ChangeItem;
 import org.dxworks.jiraminer.dto.response.issues.ChangeLog;
 import org.dxworks.jiraminer.dto.response.issues.Issue;
-import org.dxworks.jiraminer.dto.response.issues.IssueChange;
 import org.dxworks.jiraminer.dto.response.issues.worklog.WorkLog;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +25,8 @@ class IssuesServiceIT {
 	private static final String JIRA_HOME = TestUtils.getJiraHome();
 	public static final String PROJECT_KEY = "IG";
 
-	private final IssuesService issuesService = new IssuesService(JIRA_HOME, TestUtils.getJiraAuthenticator());
+	private final JiraDeploymentContext deploymentContext = JiraDeploymentContextFactory.detect(JIRA_HOME, TestUtils.getJiraAuthenticator());
+	private final IssuesService issuesService = new IssuesService(deploymentContext, ExportType.BASIC);
 
 	@Test
 	void getAllIssuesForProjects() {

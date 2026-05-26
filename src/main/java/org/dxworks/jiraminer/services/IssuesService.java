@@ -1,13 +1,17 @@
 package org.dxworks.jiraminer.services;
 
 import com.google.api.client.http.GenericUrl;
-import com.google.api.client.http.HttpRequestInitializer;
 import com.google.common.collect.ImmutableMap;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.dxworks.jiraminer.JiraApiService;
+import org.dxworks.jiraminer.configuration.ExportType;
+import org.dxworks.jiraminer.deployment.DeploymentType;
+import org.dxworks.jiraminer.deployment.JiraDeploymentContext;
+import org.dxworks.jiraminer.dto.request.issues.JiraCloudIssuesRequestBody;
 import org.dxworks.jiraminer.dto.request.issues.JiraIssuesRequestBody;
 import org.dxworks.jiraminer.dto.response.issues.*;
+import org.dxworks.jiraminer.dto.response.issues.CloudIssueSearchResult;
 import org.dxworks.jiraminer.dto.response.issues.worklog.WorkLog;
 import org.dxworks.jiraminer.dto.response.issues.worklog.WorkLogsResponse;
 import org.dxworks.jiraminer.pagination.IssueChangelogUrl;
@@ -25,12 +29,17 @@ import static java.util.Collections.singletonList;
 @Slf4j
 public class IssuesService extends JiraApiService {
 
-    public IssuesService(String jiraHome, HttpRequestInitializer httpRequestInitializer) {
-        super(jiraHome, httpRequestInitializer);
+    private final DeploymentType deploymentType;
+    private final ExportType exportType;
+
+    public IssuesService(JiraDeploymentContext context, ExportType exportType) {
+        super(context.getJiraHome(), context.getApiVersion(), context.getRequestInitializer());
+        this.deploymentType = context.getDeploymentType();
+        this.exportType = exportType;
     }
 
-    public IssuesService(String jiraHome) {
-        super(jiraHome);
+    private boolean isDetailedExport() {
+        return exportType == ExportType.DETAILED;
     }
 
     @SneakyThrows
@@ -86,6 +95,13 @@ public class IssuesService extends JiraApiService {
     }
 
     public List<Issue> getAllIssuesForProjects(LocalDate updatedAfter, LocalDate updatedBefore, String... projectKeys) {
+        if (deploymentType == DeploymentType.Cloud) {
+            return getAllIssuesForProjectsCloud(updatedAfter, updatedBefore, projectKeys);
+        }
+        return getAllIssuesForProjectsServer(updatedAfter, updatedBefore, projectKeys);
+    }
+
+    private List<Issue> getAllIssuesForProjectsServer(LocalDate updatedAfter, LocalDate updatedBefore, String... projectKeys) {
         String apiPath = getApiPath("search");
 
         int maxResults = 100;
@@ -113,6 +129,26 @@ public class IssuesService extends JiraApiService {
         return all;
     }
 
+    private List<Issue> getAllIssuesForProjectsCloud(LocalDate updatedAfter, LocalDate updatedBefore, String... projectKeys) {
+        String apiPath = getApiPath("search", "jql");
+        int maxResults = 100;
+        String jqlQuery = createJqlQuery(updatedAfter, updatedBefore, projectKeys);
+
+        List<Issue> all = new ArrayList<>();
+        String nextPageToken = null;
+        int pageCount = 0;
+
+        do {
+            CloudIssueSearchResult page = searchIssuesCloud(apiPath, jqlQuery, maxResults, nextPageToken);
+            all.addAll(page.getIssues());
+            nextPageToken = page.getNextPageToken();
+            pageCount++;
+            log.info("Completed Cloud page {} with {} issues", pageCount, page.getIssues().size());
+        } while (nextPageToken != null && !nextPageToken.isEmpty());
+
+        return all;
+    }
+
     private static int[] remainingPageStartAts(int total, int maxResults) {
         int pageCount = pageCount(total, maxResults);
         return IntStream.range(1, pageCount).map(i -> i * maxResults).toArray();
@@ -127,13 +163,25 @@ public class IssuesService extends JiraApiService {
     }
 
     public void addChangeLog(Issue issue) {
-        if (issue.getChangelog().getMaxResults() < issue.getChangelog().getTotal()) {
-            issue.getChangelog().getChanges().addAll(getChangeLogForIssue(issue.getKey(), issue.getChangelog().getMaxResults()));
+        if (issue.getChangelog() == null) {
+            // Changelog is missing entirely, fetch full changelog
+            ChangeLog changeLog = new ChangeLog();
+            changeLog.setChanges(getChangeLogForIssue(issue.getKey(), 0));
+            changeLog.setMaxResults(changeLog.getChanges().size());
+            changeLog.setTotal(changeLog.getChanges().size());
+            issue.setChangelog(changeLog);
+        } else {
+            int loadedEntries = issue.getChangelog().getChanges().size();
+            if (loadedEntries < issue.getChangelog().getTotal()) {
+                // Changelog is paginated, fetch remaining pages
+                issue.getChangelog().getChanges().addAll(getChangeLogForIssue(issue.getKey(), loadedEntries));
+            }
         }
+        // If changelog is already complete (changes.size >= total), no-op
     }
 
     private IssueSearchResult searchIssues(String apiPath, String jqlQuery, int maxResults, int startAt) {
-        JiraIssuesRequestBody body = new JiraIssuesRequestBody(jqlQuery, startAt, maxResults, singletonList("changelog"));
+        JiraIssuesRequestBody body = new JiraIssuesRequestBody(jqlQuery, startAt, maxResults, getExpandList());
         HttpResponse httpResponse = rlPost(new GenericUrl(apiPath), body);
         if (!httpResponse.isSuccessStatusCode()) {
             log.warn("Failed Request: {} {} for {} {}", httpResponse.getStatusCode(), httpResponse.getStatusMessage(), httpResponse.getRequest().getUrl(), body);
@@ -142,6 +190,32 @@ public class IssuesService extends JiraApiService {
                     "Search issues failed for startAt=%d with status=%d", startAt, httpResponse.getStatusCode()));
         }
         return parseIfOk(httpResponse, IssueSearchResult.class).orElseGet(IssueSearchResult::new);
+    }
+
+    private CloudIssueSearchResult searchIssuesCloud(String apiPath, String jqlQuery, int maxResults, String nextPageToken) {
+        JiraCloudIssuesRequestBody body = new JiraCloudIssuesRequestBody();
+        body.setJql(jqlQuery);
+        body.setMaxResults(maxResults);
+        body.setFields(singletonList("*all"));
+        body.setNextPageToken(nextPageToken);
+        body.setExpand(getCloudExpand());
+
+        HttpResponse httpResponse = rlPost(new GenericUrl(apiPath), body);
+        if (!httpResponse.isSuccessStatusCode()) {
+            log.warn("Failed Request: {} {} for {} {}", httpResponse.getStatusCode(), httpResponse.getStatusMessage(), httpResponse.getRequest().getUrl(), body);
+            httpResponse.parseAsString();
+            throw new IllegalStateException(String.format(
+                    "Search issues failed for nextPageToken=%s with status=%d", nextPageToken, httpResponse.getStatusCode()));
+        }
+        return parseIfOk(httpResponse, CloudIssueSearchResult.class).orElseGet(CloudIssueSearchResult::new);
+    }
+
+    private List<String> getExpandList() {
+        return isDetailedExport() ? singletonList("changelog") : Collections.emptyList();
+    }
+
+    private String getCloudExpand() {
+        return getExpandList().isEmpty() ? null : String.join(",", getExpandList());
     }
 
     private String createJqlQuery(LocalDate updatedAfter, LocalDate updatedBefore, String... existingJiraProjects) {

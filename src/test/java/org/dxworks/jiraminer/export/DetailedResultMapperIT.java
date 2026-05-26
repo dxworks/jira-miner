@@ -1,9 +1,12 @@
 package org.dxworks.jiraminer.export;
 
 import org.dxworks.jiraminer.TestUtils;
+import org.dxworks.jiraminer.configuration.ExportType;
+import org.dxworks.jiraminer.deployment.JiraDeploymentContextFactory;
 import org.dxworks.jiraminer.dto.response.issues.Issue;
 import org.dxworks.jiraminer.dto.response.issues.IssueField;
 import org.dxworks.jiraminer.dto.response.issues.comments.IssueStatus;
+import org.dxworks.jiraminer.deployment.JiraDeploymentContext;
 import org.dxworks.jiraminer.services.CommentsService;
 import org.dxworks.jiraminer.services.IssueFieldsService;
 import org.dxworks.jiraminer.services.IssuesService;
@@ -15,18 +18,20 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Collectors;
 
-class ResultExporterIT {
+class DetailedResultMapperIT {
 
     private static final String jiraHome = TestUtils.getJiraHome();
     private static final AuthenticationProvider authenticator = TestUtils.getJiraAuthenticator();
 
-    private final IssuesService issuesService = new IssuesService(jiraHome, authenticator);
-    private final IssueFieldsService issueFieldsService = new IssueFieldsService(jiraHome, authenticator);
-    private final CommentsService commentsService = new CommentsService(jiraHome, authenticator);
-    private final StatusesService statusesService = new StatusesService(jiraHome, authenticator);
-
     @Test
     void exportIssues() {
+        JiraDeploymentContext deploymentContext = JiraDeploymentContextFactory.detect(jiraHome, authenticator);
+        
+        IssuesService issuesService = new IssuesService(deploymentContext, ExportType.DETAILED);
+        IssueFieldsService issueFieldsService = new IssueFieldsService(deploymentContext);
+        CommentsService commentsService = new CommentsService(deploymentContext);
+        StatusesService statusesService = new StatusesService(deploymentContext);
+
         List<Issue> issues = issuesService.getAllIssuesForProjects("IG");
         commentsService.addCommentsToIssues(issues);
         List<IssueField> issueFields = issueFieldsService.getFields();
@@ -36,7 +41,9 @@ class ResultExporterIT {
                 .filter(issueField -> issueField.getId().equals("customfield_10026") || issueField.getId()
                         .equals("customfield_10018")).collect(Collectors.toList());
 
-        new ResultExporter().export(issues, allStatuses, Paths.get("./tasks.json").toFile(), testCustomFields);
+        DetailedResultMapper mapper = new DetailedResultMapper(deploymentContext);
+        JiraProjectResult result = mapper.getExportResult(issues, allStatuses, testCustomFields);
+        new JsonFileWriter().write(Paths.get("./tasks.json").toFile(), result);
     }
 
 }

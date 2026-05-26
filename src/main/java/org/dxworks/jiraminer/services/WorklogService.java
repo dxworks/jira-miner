@@ -1,10 +1,10 @@
 package org.dxworks.jiraminer.services;
 
 import com.google.api.client.http.GenericUrl;
-import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.util.Key;
 import lombok.Data;
 import org.dxworks.jiraminer.JiraApiService;
+import org.dxworks.jiraminer.deployment.JiraDeploymentContext;
 import org.dxworks.jiraminer.dto.request.worklogs.ListWorkLogsRequest;
 import org.dxworks.jiraminer.dto.response.issues.worklog.WorkLog;
 import org.dxworks.jiraminer.dto.response.worklogs.UpdatedWorkLogsResponse;
@@ -16,20 +16,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class WorklogService extends JiraApiService {
-    public WorklogService(String jiraHome) {
-        super(jiraHome);
-    }
-
-    public WorklogService(String jiraHome, String apiVersion) {
-        super(jiraHome, apiVersion);
-    }
-
-    public WorklogService(String jiraHome, HttpRequestInitializer httpRequestInitializer) {
-        super(jiraHome, httpRequestInitializer);
-    }
-
-    public WorklogService(String jiraHome, String apiVersion, HttpRequestInitializer httpRequestInitializer) {
-        super(jiraHome, apiVersion, httpRequestInitializer);
+    public WorklogService(JiraDeploymentContext context) {
+        super(context.getJiraHome(), context.getApiVersion(), context.getRequestInitializer());
     }
 
     public List<Long> getWorkLogIdsModifiedSince(Long since) {
